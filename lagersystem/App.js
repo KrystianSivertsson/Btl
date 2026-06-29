@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   StyleSheet, Text, View, TextInput, TouchableOpacity,
   FlatList, Modal, Alert, SafeAreaView, StatusBar, Image, Platform, ScrollView,
-  useWindowDimensions
+  useWindowDimensions, Animated
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SEED_PRODUKTER } from './seedData';
@@ -314,28 +314,9 @@ const pm = StyleSheet.create({
 });
 
 // ─── Chat panel ───────────────────────────────────────────────────────────────
-function ChatPanel({ token, user, onStang }) {
-  const [meddelanden, setMeddelanden] = useState([]);
+function ChatPanel({ user, onStang, meddelanden, online, wsRef }) {
   const [text, setText] = useState('');
-  const [online, setOnline] = useState([]);
-  const wsRef = useRef(null);
   const listRef = useRef(null);
-
-  useEffect(() => {
-    fetch(`${API}/api/messages`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.json()).then(setMeddelanden).catch(() => {});
-
-    if (Platform.OS === 'web') {
-      const ws = new WebSocket(`ws://${window.location.hostname}:3001/ws?token=${token}`);
-      wsRef.current = ws;
-      ws.onmessage = (e) => {
-        const data = JSON.parse(e.data);
-        if (data.type === 'message') setMeddelanden(prev => [...prev, data.message]);
-        if (data.type === 'online') setOnline(data.users);
-      };
-      return () => ws.close();
-    }
-  }, []);
 
   useEffect(() => {
     if (listRef.current) setTimeout(() => listRef.current?.scrollToEnd?.({ animated: true }), 50);
@@ -424,6 +405,70 @@ const cp = StyleSheet.create({
   skickaText: { color: '#fff', fontSize: 18, fontWeight: '700' },
 });
 
+// ─── Chat Bubble (Messenger-stil) ─────────────────────────────────────────────
+function ChatBubble({ senasteMeddelande, antal, onPress }) {
+  const scale = useRef(new Animated.Value(0)).current;
+  const bounce = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!senasteMeddelande) return;
+    scale.setValue(0);
+    bounce.setValue(0);
+    Animated.sequence([
+      Animated.spring(scale, { toValue: 1, useNativeDriver: true, tension: 200, friction: 8 }),
+      Animated.sequence([
+        Animated.timing(bounce, { toValue: -12, duration: 120, useNativeDriver: true }),
+        Animated.spring(bounce, { toValue: 0, useNativeDriver: true, tension: 300, friction: 6 }),
+      ]),
+    ]).start();
+  }, [senasteMeddelande]);
+
+  if (!senasteMeddelande) return null;
+
+  return (
+    <Animated.View style={[cb.wrap, { transform: [{ scale }, { translateY: bounce }] }]}>
+      <TouchableOpacity style={cb.bubbla} onPress={onPress} activeOpacity={0.85}>
+        <Text style={cb.avatar}>{senasteMeddelande.avatar || '😀'}</Text>
+        {antal > 0 && (
+          <View style={cb.badge}>
+            <Text style={cb.badgeText}>{antal > 9 ? '9+' : antal}</Text>
+          </View>
+        )}
+      </TouchableOpacity>
+      <View style={cb.tooltip}>
+        <Text style={cb.tooltipNamn}>{senasteMeddelande.user}</Text>
+        <Text style={cb.tooltipText} numberOfLines={1}>{senasteMeddelande.text}</Text>
+      </View>
+    </Animated.View>
+  );
+}
+
+const cb = StyleSheet.create({
+  wrap: { position: 'absolute', bottom: 100, right: 24, alignItems: 'flex-end', zIndex: 200 },
+  bubbla: {
+    width: 58, height: 58, borderRadius: 29,
+    backgroundColor: '#1a2235',
+    justifyContent: 'center', alignItems: 'center',
+    shadowColor: '#000', shadowOpacity: 0.35, shadowRadius: 12, elevation: 12,
+    borderWidth: 2.5, borderColor: '#2563eb',
+  },
+  avatar: { fontSize: 28 },
+  badge: {
+    position: 'absolute', top: -2, right: -2,
+    backgroundColor: '#ef4444', borderRadius: 10,
+    minWidth: 20, height: 20, justifyContent: 'center', alignItems: 'center',
+    paddingHorizontal: 4, borderWidth: 1.5, borderColor: '#fff',
+  },
+  badgeText: { color: '#fff', fontSize: 11, fontWeight: '700' },
+  tooltip: {
+    marginTop: 6, backgroundColor: '#1a2235', borderRadius: 10,
+    paddingHorizontal: 12, paddingVertical: 7, maxWidth: 200,
+    shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 6,
+  },
+  tooltipNamn: { color: '#7dd3fc', fontSize: 11, fontWeight: '700', marginBottom: 2 },
+  tooltipText: { color: '#e0e0e0', fontSize: 12 },
+});
+
 // ─── Main App ─────────────────────────────────────────────────────────────────
 export default function App() {
   const [inloggad, setInloggad] = useState(null);
@@ -443,8 +488,40 @@ export default function App() {
   const [visaChat, setVisaChat] = useState(false);
   const [visaProfil, setVisaProfil] = useState(false);
   const [visaSidebar, setVisaSidebar] = useState(false);
+  const [meddelanden, setMeddelanden] = useState([]);
+  const [onlineUsers, setOnlineUsers] = useState([]);
+  const [chatBubble, setChatBubble] = useState(null);
+  const [olastaAntal, setOlastaAntal] = useState(0);
+  const wsRef = useRef(null);
+  const visaChatRef = useRef(false);
   const { width } = useWindowDimensions();
   const mobil = width < 768;
+
+  useEffect(() => { visaChatRef.current = visaChat; }, [visaChat]);
+
+  useEffect(() => {
+    if (!token || Platform.OS !== 'web') return;
+    fetch(`${API}/api/messages`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json()).then(setMeddelanden).catch(() => {});
+    const ws = new WebSocket(`ws://${window.location.hostname}:3001/ws?token=${token}`);
+    wsRef.current = ws;
+    ws.onmessage = (e) => {
+      const data = JSON.parse(e.data);
+      if (data.type === 'message') {
+        setMeddelanden(prev => [...prev, data.message]);
+        if (!visaChatRef.current) {
+          setChatBubble(data.message);
+          setOlastaAntal(n => n + 1);
+        }
+      }
+      if (data.type === 'online') setOnlineUsers(data.users);
+    };
+    return () => ws.close();
+  }, [token]);
+
+  useEffect(() => {
+    if (visaChat) { setChatBubble(null); setOlastaAntal(0); }
+  }, [visaChat]);
 
   useEffect(() => { kollaSession(); }, []);
   useEffect(() => { if (inloggad) laddaProdukter(); }, [inloggad]);
@@ -780,7 +857,8 @@ export default function App() {
       </View>
 
       {/* Chat floating panel */}
-      {visaChat && <ChatPanel token={token} user={inloggad} onStang={() => setVisaChat(false)} />}
+      {visaChat && <ChatPanel user={inloggad} onStang={() => setVisaChat(false)} meddelanden={meddelanden} online={onlineUsers} wsRef={wsRef} />}
+      {!visaChat && <ChatBubble senasteMeddelande={chatBubble} antal={olastaAntal} onPress={() => setVisaChat(true)} />}
 
       {visaProfil && <ProfilModal user={inloggad} token={token} onStang={() => setVisaProfil(false)} onUppdatera={(u) => setInloggad(u)} />}
       {visaAnvandare && <AnvandarHantering token={token} onStang={() => setVisaAnvandare(false)} />}

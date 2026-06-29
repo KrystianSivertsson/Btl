@@ -221,6 +221,7 @@ wss.on('connection', (ws, req) => {
           id: Date.now().toString(),
           user: user.namn,
           username: user.username,
+          avatar: user.avatar || '😀',
           text: msg.text,
           tid: new Date().toISOString(),
         };
