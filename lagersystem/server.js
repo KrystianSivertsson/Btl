@@ -273,3 +273,12 @@ function broadcastOnline() {
 
 const PORT = process.env.PORT || 3001;
 server.listen(PORT, '0.0.0.0', () => console.log(`Server kör på http://localhost:${PORT}`));
+
+const certPath = path.join(__dirname, 'certs', 'cert.pem');
+const keyPath  = path.join(__dirname, 'certs', 'key.pem');
+if (fs.existsSync(certPath) && fs.existsSync(keyPath)) {
+  const HTTPS_PORT = process.env.HTTPS_PORT || 3443;
+  const httpsServer = https.createServer({ cert: fs.readFileSync(certPath), key: fs.readFileSync(keyPath) }, app);
+  new WebSocketServer({ server: httpsServer, path: '/ws' }).on('connection', (...args) => wss.emit('connection', ...args));
+  httpsServer.listen(HTTPS_PORT, '0.0.0.0', () => console.log(`HTTPS kör på https://localhost:${HTTPS_PORT}`));
+}
