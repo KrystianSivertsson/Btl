@@ -22,7 +22,7 @@ function urlBase64ToUint8Array(base64String) {
 }
 const STORAGE_KEY = 'lagersystem_produkter';
 const TOKEN_KEY = 'lagersystem_token';
-const FLIKAR = ['Alla produkter', 'Schueco ASE 60', 'Schueco ASS 32', 'Osorterat', 'STEP→BTL'];
+const FLIKAR = ['Alla produkter', 'Schueco ASE 60', 'Schueco ASS 32', 'Osorterat'];
 const RITNINGAR = [{ id: 'ase60', label: 'ASE 60 Ritningar', fil: 'ritningar_ase60.pdf' }];
 
 // ─── Login screen ────────────────────────────────────────────────────────────
@@ -540,12 +540,6 @@ export default function App() {
   const [visaChat, setVisaChat] = useState(false);
   const [visaProfil, setVisaProfil] = useState(false);
   const [visaSidebar, setVisaSidebar] = useState(false);
-  const [stepFileName, setStepFileName] = useState('');
-  const [stepContent, setStepContent] = useState('');
-  const [btlText, setBtlText] = useState('');
-  const [stepError, setStepError] = useState('');
-  const [converting, setConverting] = useState(false);
-  const stepFileInputRef = useRef(null);
   const [meddelanden, setMeddelanden] = useState([]);
   const [onlineUsers, setOnlineUsers] = useState([]);
   const [chatBubble, setChatBubble] = useState(null);
@@ -637,7 +631,6 @@ export default function App() {
   };
 
   const arRitning = RITNINGAR.some(r => r.id === aktivFlik);
-  const isStepTab = aktivFlik === 'STEP→BTL';
 
   const oppnaLaggTill = () => {
     setRedigeraProdukt(null);
@@ -645,78 +638,6 @@ export default function App() {
     setFormKategori(aktivFlik === 'Alla produkter' || arRitning ? '' : aktivFlik);
     setFormMinAntal('5');
     setModalVisible(true);
-  };
-
-  const triggerStepFileInput = () => {
-    if (Platform.OS === 'web' && stepFileInputRef.current) {
-      stepFileInputRef.current.click();
-    } else {
-      Alert.alert('Endast web', 'STEP-uppladdning stöds bara i webbläsaren.');
-    }
-  };
-
-  const onStepFileChange = async (event) => {
-    setStepError('');
-    setBtlText('');
-    const file = event.target?.files?.[0];
-    if (!file) return;
-    setStepFileName(file.name);
-    const reader = new FileReader();
-    reader.onload = () => {
-      setStepContent(reader.result || '');
-    };
-    reader.onerror = () => {
-      setStepError('Kunde inte läsa STEP-filen');
-    };
-    reader.readAsText(file);
-  };
-
-  const convertStepFile = async () => {
-    if (!token) { setStepError('Logga in först.'); return; }
-    if (!stepContent) { setStepError('Välj en STEP-fil först.'); return; }
-    setConverting(true);
-    setStepError('');
-    try {
-      const response = await fetch(`${API}/api/convert-step`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ filename: stepFileName || 'model.step', content: stepContent }),
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        setStepError(data.error || 'Konvertering misslyckades');
-        setConverting(false);
-        return;
-      }
-      setBtlText(data.btl || '');
-    } catch (err) {
-      setStepError('Nätverksfel vid konvertering');
-    } finally {
-      setConverting(false);
-    }
-  };
-
-  const downloadBtl = async () => {
-    if (!btlText) return;
-    const filename = (stepFileName || 'model.step').replace(/\.[^.]+$/, '.btl');
-    if (Platform.OS === 'web') {
-      const blob = new Blob([btlText], { type: 'text/plain' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } else {
-      const filePath = FileSystem.documentDirectory + filename;
-      await FileSystem.writeAsStringAsync(filePath, btlText);
-      await Sharing.shareAsync(filePath);
-    }
   };
 
   const oppnaRedigera = (produkt) => {
@@ -911,42 +832,7 @@ export default function App() {
               />
             </View>
 
-            {isStepTab ? (
-              <View style={styles.converterCard}>
-                <Text style={styles.converterTitle}>STEP → BTL</Text>
-                <Text style={styles.converterText}>Välj en STEP-fil (.step eller .stp) och konvertera den till en BTL-fil.</Text>
-                <TouchableOpacity style={styles.converterButton} onPress={triggerStepFileInput}>
-                  <Text style={styles.converterButtonText}>Välj STEP-fil</Text>
-                </TouchableOpacity>
-                <input
-                  ref={stepFileInputRef}
-                  type="file"
-                  accept=".step,.stp"
-                  style={{ display: 'none' }}
-                  onChange={onStepFileChange}
-                />
-                {stepFileName ? <Text style={styles.converterFileName}>{stepFileName}</Text> : null}
-                <TouchableOpacity
-                  style={[styles.converterButton, (!stepContent || converting) && styles.converterButtonDisabled]}
-                  onPress={convertStepFile}
-                  disabled={!stepContent || converting}
-                >
-                  <Text style={styles.converterButtonText}>{converting ? 'Konverterar...' : 'Konvertera till BTL'}</Text>
-                </TouchableOpacity>
-                {stepError ? <Text style={styles.errorText}>{stepError}</Text> : null}
-                {btlText ? (
-                  <>
-                    <TouchableOpacity style={styles.downloadButton} onPress={downloadBtl}>
-                      <Text style={styles.downloadText}>Ladda ner BTL</Text>
-                    </TouchableOpacity>
-                    <ScrollView style={styles.btlPreview}>
-                      <Text style={styles.btlPreviewText}>{btlText}</Text>
-                    </ScrollView>
-                  </>
-                ) : null}
-              </View>
-            ) : (
-              <>
+            <>
                 {!mobil && (
                   <View style={styles.tabellHuvud}>
                     <Text style={[styles.tabellHuvudText, { flex: 1.2 }]}>Artikelnr</Text>
@@ -1021,7 +907,6 @@ export default function App() {
               }}
             />
           </>
-          )}
         </>}
         </View>
       </View>
@@ -1160,18 +1045,6 @@ const styles = StyleSheet.create({
     fontSize: 14, marginBottom: 12, borderWidth: 1, borderColor: '#e0e0e0' },
   modalKnappar: { flexDirection: 'row', gap: 10, marginTop: 4 },
   avbrytKnapp: { flex: 1, backgroundColor: '#f0f2f5', borderRadius: 8, padding: 13, alignItems: 'center' },
-  converterCard: { backgroundColor: '#fff', borderRadius: 14, padding: 22, borderWidth: 1, borderColor: '#e5e7eb', marginBottom: 16 },
-  converterTitle: { fontSize: 20, fontWeight: '700', color: '#111827', marginBottom: 8 },
-  converterText: { color: '#374151', fontSize: 14, marginBottom: 16 },
-  converterButton: { backgroundColor: '#2563eb', borderRadius: 10, paddingVertical: 14, alignItems: 'center', marginBottom: 12 },
-  converterButtonDisabled: { backgroundColor: '#93c5fd' },
-  converterButtonText: { color: '#fff', fontWeight: '700', fontSize: 14 },
-  converterFileName: { color: '#4b5563', fontSize: 13, marginBottom: 10 },
-  errorText: { color: '#b91c1c', marginBottom: 12 },
-  downloadButton: { backgroundColor: '#10b981', borderRadius: 10, paddingVertical: 14, alignItems: 'center', marginBottom: 10 },
-  downloadText: { color: '#fff', fontWeight: '700', fontSize: 14 },
-  btlPreview: { maxHeight: 320, backgroundColor: '#111827', borderRadius: 10, padding: 14 },
-  btlPreviewText: { color: '#f3f4f6', fontSize: 12, lineHeight: 18, fontFamily: Platform.OS === 'web' ? 'monospace' : undefined },
   avbrytText: { color: '#666', fontWeight: 'bold' },
   sparaKnapp: { flex: 1, backgroundColor: '#16a34a', borderRadius: 8, padding: 13, alignItems: 'center' },
   sparaText: { color: '#fff', fontWeight: 'bold' },
