@@ -570,6 +570,7 @@ export default function App() {
   const [formAntal, setFormAntal] = useState('');
   const [formKategori, setFormKategori] = useState('');
   const [formMinAntal, setFormMinAntal] = useState('5');
+  const [formEnhet, setFormEnhet] = useState('st');
   const [visaAnvandare, setVisaAnvandare] = useState(false);
   const [visaChat, setVisaChat] = useState(false);
   const [visaProfil, setVisaProfil] = useState(false);
@@ -684,6 +685,7 @@ export default function App() {
     setFormNamn(''); setFormAntal('');
     setFormKategori(aktivFlik === 'Alla produkter' || arRitning ? '' : aktivFlik);
     setFormMinAntal('5');
+    setFormEnhet('st');
     setModalVisible(true);
   };
 
@@ -693,6 +695,7 @@ export default function App() {
     setFormAntal(String(produkt.antal));
     setFormKategori(produkt.kategori);
     setFormMinAntal(String(produkt.minAntal));
+    setFormEnhet(produkt.enhet || 'st');
     setModalVisible(true);
   };
 
@@ -704,14 +707,14 @@ export default function App() {
     if (redigeraProdukt) {
       nyLista = produkter.map(p =>
         p.id === redigeraProdukt.id
-          ? { ...p, namn: formNamn.trim(), antal, kategori: formKategori.trim(), minAntal }
+          ? { ...p, namn: formNamn.trim(), antal, kategori: formKategori.trim(), minAntal, enhet: formEnhet }
           : p
       );
     } else {
       nyLista = [...produkter, {
         id: Date.now().toString(),
         namn: formNamn.trim(), antal,
-        kategori: formKategori.trim(), minAntal,
+        kategori: formKategori.trim(), minAntal, enhet: formEnhet,
       }];
     }
     setProdukter(nyLista);
@@ -973,7 +976,7 @@ export default function App() {
                       </View>
                       <View style={styles.kortBotten}>
                         <Text style={[styles.kortAntal, { color: c.text }]}>
-                          Antal: <Text style={[{ fontWeight: '700' }, lavt && styles.radAntalLavt]}>{item.antal}</Text>
+                          Antal: <Text style={[{ fontWeight: '700' }, lavt && styles.radAntalLavt]}>{item.antal}{item.enhet || 'st'}</Text>
                         </Text>
                         <View style={styles.radKnappar}>
                           <TouchableOpacity style={styles.redigeraKnapp} onPress={() => oppnaRedigera(item)}>
@@ -994,7 +997,7 @@ export default function App() {
                     <Text style={[styles.radText, { flex: 1.2, color: c.textMuted }]}>{item.artikel || '—'}</Text>
                     <Text style={[styles.radText, { flex: 3, fontWeight: '600', color: c.textRubrik }]}>{item.namn}</Text>
                     <Text style={[styles.radText, { flex: 2, color: c.text }]}>{item.kategori || '—'}</Text>
-                    <Text style={[styles.radText, { flex: 1, textAlign: 'center', color: c.text }, lavt && styles.radAntalLavt]}>{item.antal}</Text>
+                    <Text style={[styles.radText, { flex: 1, textAlign: 'center', color: c.text }, lavt && styles.radAntalLavt]}>{item.antal}{item.enhet || 'st'}</Text>
                     <View style={{ flex: 1, alignItems: 'center' }}>
                       <View style={[styles.statusBadge, lavt ? styles.statusLavt : styles.statusOk]}>
                         <Text style={styles.statusText}>{lavt ? 'Lågt' : 'OK'}</Text>
@@ -1043,10 +1046,24 @@ export default function App() {
                 </TouchableOpacity>
               ))}
             </View>
-            <TextInput style={[styles.input, { backgroundColor: c.input, borderColor: c.inputBorder, color: c.inputText }]} placeholder="Antal i lager" placeholderTextColor={c.textMuted}
-              value={formAntal} onChangeText={setFormAntal} keyboardType="numeric" />
-            <TextInput style={[styles.input, { backgroundColor: c.input, borderColor: c.inputBorder, color: c.inputText }]} placeholder="Varning vid antal (standard 5)" placeholderTextColor={c.textMuted}
-              value={formMinAntal} onChangeText={setFormMinAntal} keyboardType="numeric" />
+            <Text style={[styles.inputLabel, { color: c.textMuted }]}>Antal i lager</Text>
+            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
+              <TextInput style={[styles.input, { flex: 1, marginBottom: 0, backgroundColor: c.input, borderColor: c.inputBorder, color: c.inputText }]} placeholder="Antal" placeholderTextColor={c.textMuted}
+                value={formAntal} onChangeText={setFormAntal} keyboardType="numeric" />
+              <View style={{ flexDirection: 'row', gap: 6 }}>
+                {['st', 'm'].map(e => (
+                  <TouchableOpacity key={e}
+                    style={[styles.kategoriKnapp, { backgroundColor: c.input, paddingHorizontal: 18 }, formEnhet === e && styles.kategoriKnappAktiv]}
+                    onPress={() => setFormEnhet(e)}>
+                    <Text style={[styles.kategoriText, { color: c.text }, formEnhet === e && styles.kategoriTextAktiv]}>{e}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+            {inloggad.roll === 'admin' && (
+              <TextInput style={[styles.input, { backgroundColor: c.input, borderColor: c.inputBorder, color: c.inputText }]} placeholder="Varning vid antal (standard 5)" placeholderTextColor={c.textMuted}
+                value={formMinAntal} onChangeText={setFormMinAntal} keyboardType="numeric" />
+            )}
             <View style={styles.modalKnappar}>
               <TouchableOpacity style={[styles.avbrytKnapp, { backgroundColor: c.input }]} onPress={() => setModalVisible(false)}>
                 <Text style={[styles.avbrytText, { color: c.textMuted }]}>Avbryt</Text>
