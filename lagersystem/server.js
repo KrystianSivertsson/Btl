@@ -35,6 +35,7 @@ const TOKENS_FILE = path.join(DATA_DIR, 'tokens.json');
 const VAPID_FILE = path.join(DATA_DIR, 'vapid.json');
 const PUSH_SUBS_FILE = path.join(DATA_DIR, 'push_subs.json');
 const CHANGES_FILE = path.join(DATA_DIR, 'changes.json');
+const KUNDER_FILE = path.join(DATA_DIR, 'kunder.json');
 
 // VAPID keys — generate once, reuse
 let vapidKeys;
@@ -64,6 +65,7 @@ if (!fs.existsSync(USERS_FILE)) {
 if (!fs.existsSync(MESSAGES_FILE)) writeJSON(MESSAGES_FILE, []);
 if (!fs.existsSync(TOKENS_FILE)) writeJSON(TOKENS_FILE, {});
 if (!fs.existsSync(CHANGES_FILE)) writeJSON(CHANGES_FILE, []);
+if (!fs.existsSync(KUNDER_FILE)) writeJSON(KUNDER_FILE, []);
 
 // Auth middleware — accepts header OR query param (for iframe/PDF)
 const authMiddleware = (req, res, next) => {
@@ -197,6 +199,29 @@ app.post('/api/changes', authMiddleware, (req, res) => {
   });
   if (changes.length > 1000) changes.splice(0, changes.length - 1000);
   writeJSON(CHANGES_FILE, changes);
+  res.json({ ok: true });
+});
+
+// --- KUNDER ---
+app.get('/api/kunder', authMiddleware, (req, res) => {
+  res.json(readJSON(KUNDER_FILE, []));
+});
+
+app.post('/api/kunder', authMiddleware, (req, res) => {
+  const { namn } = req.body;
+  if (!namn?.trim()) return res.status(400).json({ error: 'Namn krävs' });
+  const kunder = readJSON(KUNDER_FILE, []);
+  const ny = { id: Date.now().toString(), namn: namn.trim(), skapad: new Date().toISOString(), skapadAv: req.user.namn };
+  kunder.push(ny);
+  writeJSON(KUNDER_FILE, kunder);
+  res.json(ny);
+});
+
+app.delete('/api/kunder/:id', authMiddleware, (req, res) => {
+  const kunder = readJSON(KUNDER_FILE, []);
+  const kvar = kunder.filter(k => k.id !== req.params.id);
+  if (kvar.length === kunder.length) return res.status(404).json({ error: 'Kund hittades ej' });
+  writeJSON(KUNDER_FILE, kvar);
   res.json({ ok: true });
 });
 

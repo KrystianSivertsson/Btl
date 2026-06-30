@@ -689,6 +689,11 @@ export default function App() {
   const [visaAnvandare, setVisaAnvandare] = useState(false);
   const [visaChat, setVisaChat] = useState(false);
   const [andringslogg, setAndringslogg] = useState([]);
+  const [kunder, setKunder] = useState([]);
+  const [valdKund, setValdKund] = useState(null);
+  const [aktivKundFlik, setAktivKundFlik] = useState('Träfräs');
+  const [visaLaggTillKund, setVisaLaggTillKund] = useState(false);
+  const [nyKundNamn, setNyKundNamn] = useState('');
   const [visaProfil, setVisaProfil] = useState(false);
   const [visaSidebar, setVisaSidebar] = useState(false);
   const [sorteringsKolumn, setSorteringsKolumn] = useState(null);
@@ -806,6 +811,7 @@ export default function App() {
 
   const arRitning = RITNINGAR.some(r => r.id === aktivFlik);
   const arAndringslogg = aktivFlik === '__andringar__';
+  const arKunder = aktivFlik === '__kunder__';
 
   useEffect(() => {
     if (arAndringslogg && token && inloggad?.roll === 'admin') {
@@ -813,6 +819,35 @@ export default function App() {
         .then(r => r.json()).then(setAndringslogg).catch(() => {});
     }
   }, [arAndringslogg]);
+
+  const laddaKunder = () => {
+    if (!token) return;
+    fetch(`${API}/api/kunder`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json()).then(setKunder).catch(() => {});
+  };
+
+  useEffect(() => { if (arKunder) laddaKunder(); }, [arKunder]);
+
+  const laggTillKund = () => {
+    if (!nyKundNamn.trim()) return;
+    fetch(`${API}/api/kunder`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ namn: nyKundNamn.trim() }),
+    }).then(r => r.json()).then(ny => {
+      setKunder(prev => [...prev, ny]);
+      setNyKundNamn('');
+      setVisaLaggTillKund(false);
+    }).catch(() => {});
+  };
+
+  const taBortKund = (id) => {
+    const ok = Platform.OS === 'web' ? window.confirm('Ta bort kund?') : true;
+    if (!ok) return;
+    fetch(`${API}/api/kunder/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } })
+      .then(() => { setKunder(prev => prev.filter(k => k.id !== id)); if (valdKund?.id === id) setValdKund(null); })
+      .catch(() => {});
+  };
 
   const vaeljBild = () => {
     if (Platform.OS !== 'web') return;
@@ -1065,6 +1100,21 @@ export default function App() {
             </TouchableOpacity>
           ))}
 
+          <View style={styles.sidebarDivider} />
+          <Text style={styles.sidebarTitel}>Kunder</Text>
+          <TouchableOpacity
+            style={[styles.sidebarFlik, arKunder && styles.sidebarFlikAktiv]}
+            onPress={() => { setAktivFlik('__kunder__'); setSok(''); setValdProdukt(null); setValdKund(null); setVisaSidebar(false); }}>
+            <Text style={[styles.sidebarFlikText, { color: c.sidebarText }, arKunder && styles.sidebarFlikTextAktiv]}>
+              👥 Kunder
+            </Text>
+            {kunder.length > 0 && (
+              <View style={[styles.sidebarBadge, { backgroundColor: c.sidebarBadge }, arKunder && styles.sidebarBadgeAktiv]}>
+                <Text style={[styles.sidebarBadgeText, { color: c.sidebarBadgeText }, arKunder && styles.sidebarBadgeTextAktiv]}>{kunder.length}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+
           {inloggad.roll === 'admin' && <>
             <View style={styles.sidebarDivider} />
             <TouchableOpacity
@@ -1166,6 +1216,86 @@ export default function App() {
             </ScrollView>
           )}
 
+          {!valdProdukt && arKunder && (
+            <ScrollView style={{ flex: 1 }}>
+              {/* Kunddetaljvy */}
+              {valdKund ? (
+                <View style={{ flex: 1 }}>
+                  <TouchableOpacity onPress={() => setValdKund(null)} style={{ marginBottom: 16 }}>
+                    <Text style={{ color: '#2563eb', fontSize: 14 }}>← Tillbaka till kunder</Text>
+                  </TouchableOpacity>
+                  <Text style={[styles.kategoriRubrik, { color: c.textRubrik, marginBottom: 16 }]}>👤 {valdKund.namn}</Text>
+                  {/* Underfliken */}
+                  <View style={{ flexDirection: 'row', gap: 8, marginBottom: 20 }}>
+                    {['Träfräs', 'Alufräs', 'Beslag'].map(flik => (
+                      <TouchableOpacity
+                        key={flik}
+                        onPress={() => setAktivKundFlik(flik)}
+                        style={{ paddingHorizontal: 18, paddingVertical: 8, borderRadius: 8, borderWidth: 1,
+                          backgroundColor: aktivKundFlik === flik ? '#2563eb' : c.input,
+                          borderColor: aktivKundFlik === flik ? '#2563eb' : c.inputBorder }}>
+                        <Text style={{ color: aktivKundFlik === flik ? '#fff' : c.text, fontWeight: '600', fontSize: 14 }}>{flik}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                  <View style={[styles.kort, { backgroundColor: c.kort, borderColor: c.kortBorder, minHeight: 200, justifyContent: 'center', alignItems: 'center' }]}>
+                    <Text style={{ color: c.textMuted, fontSize: 15 }}>{aktivKundFlik} — kommer snart</Text>
+                  </View>
+                </View>
+              ) : (
+                /* Kundlista */
+                <View>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                    <Text style={[styles.kategoriRubrik, { color: c.textRubrik }]}>👥 Kunder</Text>
+                    <TouchableOpacity
+                      onPress={() => setVisaLaggTillKund(v => !v)}
+                      style={{ backgroundColor: '#2563eb', borderRadius: 8, paddingHorizontal: 16, paddingVertical: 8 }}>
+                      <Text style={{ color: '#fff', fontWeight: '700' }}>+ Lägg till kund</Text>
+                    </TouchableOpacity>
+                  </View>
+                  {visaLaggTillKund && (
+                    <View style={[styles.kort, { backgroundColor: c.kort, borderColor: c.kortBorder, marginBottom: 16, flexDirection: 'row', gap: 8, alignItems: 'center' }]}>
+                      <TextInput
+                        style={[styles.input, { flex: 1, marginBottom: 0, backgroundColor: c.input, borderColor: c.inputBorder, color: c.inputText }]}
+                        placeholder="Kundnamn" placeholderTextColor={c.textMuted}
+                        value={nyKundNamn} onChangeText={setNyKundNamn}
+                        onSubmitEditing={laggTillKund}
+                        autoFocus />
+                      <TouchableOpacity onPress={laggTillKund} style={{ backgroundColor: '#16a34a', borderRadius: 8, paddingHorizontal: 16, paddingVertical: 10 }}>
+                        <Text style={{ color: '#fff', fontWeight: '700' }}>Spara</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={() => { setVisaLaggTillKund(false); setNyKundNamn(''); }} style={{ padding: 8 }}>
+                        <Text style={{ color: '#ef4444', fontSize: 18 }}>✕</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                  {kunder.length === 0 && !visaLaggTillKund && (
+                    <Text style={{ color: c.textMuted, textAlign: 'center', marginTop: 60, fontSize: 15 }}>Inga kunder tillagda ännu.</Text>
+                  )}
+                  {kunder.map(kund => (
+                    <TouchableOpacity
+                      key={kund.id}
+                      onPress={() => { setValdKund(kund); setAktivKundFlik('Träfräs'); }}
+                      style={[styles.kort, { backgroundColor: c.kort, borderColor: c.kortBorder, marginBottom: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
+                      <View>
+                        <Text style={{ color: c.textRubrik, fontWeight: '700', fontSize: 16 }}>👤 {kund.namn}</Text>
+                        <Text style={{ color: c.textMuted, fontSize: 12, marginTop: 2 }}>Träfräs · Alufräs · Beslag</Text>
+                      </View>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                        <Text style={{ color: c.textMuted, fontSize: 13 }}>›</Text>
+                        {inloggad.roll === 'admin' && (
+                          <TouchableOpacity onPress={(e) => { e.stopPropagation?.(); taBortKund(kund.id); }} style={{ padding: 6 }}>
+                            <Text style={{ color: '#ef4444', fontSize: 16 }}>✕</Text>
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+            </ScrollView>
+          )}
+
           {!valdProdukt && arRitning && !arAndringslogg && Platform.OS === 'web' && (() => {
             const ritning = RITNINGAR.find(r => r.id === aktivFlik);
             return React.createElement('iframe', {
@@ -1176,7 +1306,7 @@ export default function App() {
             });
           })()}
 
-          {!valdProdukt && !arRitning && !arAndringslogg && <>
+          {!valdProdukt && !arRitning && !arAndringslogg && !arKunder && <>
             {lagLager > 0 && (
               <View style={[styles.varning, { backgroundColor: c.varning, borderColor: c.varningBorder }]}>
                 <Text style={[styles.varningText, { color: c.varningText }]}>⚠️ {lagLager} produkt{lagLager > 1 ? 'er' : ''} har lågt lager</Text>
