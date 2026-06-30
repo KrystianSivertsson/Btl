@@ -655,7 +655,9 @@ function ProduktDetalj({ produkt, onTillbaka, onRedigera, inloggad }) {
             {fargSorterad.map((f, i) => (
               <View key={i} style={{ backgroundColor: c.kort, borderRadius: 10, padding: 12, borderWidth: 1, borderColor: c.kortBorder, minWidth: 100, alignItems: 'center' }}>
                 <Text style={{ fontSize: 16, fontWeight: '700', color: c.textRubrik }}>{f.farg}</Text>
-                <Text style={{ color: c.textMuted, fontSize: 13, marginTop: 2 }}>{f.antal}{produkt.enhet || 'st'}</Text>
+                <Text style={{ color: c.textMuted, fontSize: 13, marginTop: 2 }}>
+                  {f.antal}st{f.langd ? ` × ${f.langd}m` : ''}
+                </Text>
               </View>
             ))}
           </View>
@@ -841,13 +843,13 @@ export default function App() {
     setRedigeraProdukt(produkt);
     setFormNamn(produkt.namn);
     setFormArtikel(produkt.artikel || '');
-    setFormAntal(String(produkt.antal));
+    setFormAntal('');
     setFormKategori(produkt.kategori);
     setFormMinAntal(String(produkt.minAntal));
     setFormEnhet(produkt.enhet || 'st');
     setFormBild(produkt.bild || null);
-    setFormFarger((produkt.farger || []).map(f => ({ farg: f.farg, langd: String(f.langd || ''), antal: String(f.antal) })));
-    setFormLangder((produkt.langder || []).map(l => ({ langd: String(l.langd), antal: String(l.antal) })));
+    setFormFarger([]);
+    setFormLangder([]);
     setModalVisible(true);
   };
 
@@ -857,22 +859,32 @@ export default function App() {
     const antalFranFarger = fargerMedAntal.length > 0
       ? fargerMedAntal.reduce((s, f) => s + (parseInt(f.antal) || 0), 0)
       : null;
-    const antal = antalFranFarger !== null ? antalFranFarger : (parseInt(formAntal) || 0);
+    const uttag = antalFranFarger !== null ? antalFranFarger : (parseInt(formAntal) || 0);
+    const antal = redigeraProdukt
+      ? Math.max(0, (redigeraProdukt.antal || 0) - uttag)
+      : uttag;
     const minAntal = parseInt(formMinAntal) || 5;
     const genomfor = () => {
-      const farger = formFarger.filter(f => f.farg.trim()).map(f => ({ farg: f.farg.trim(), langd: parseFloat(f.langd) || 0, antal: parseInt(f.antal) || 0 }));
+      const fargerUttag = formFarger.filter(f => f.farg.trim()).map(f => ({ farg: f.farg.trim(), langd: parseFloat(f.langd) || 0, antal: parseInt(f.antal) || 0 }));
       const langder = formLangder.filter(l => l.langd).map(l => ({ langd: parseFloat(l.langd) || 0, antal: parseInt(l.antal) || 0 }));
       let nyLista;
       if (redigeraProdukt) {
+        // Subtrahera uttagna färger från befintligt lager
+        let nyFarger = [...(redigeraProdukt.farger || [])];
+        fargerUttag.forEach(u => {
+          const idx = nyFarger.findIndex(f => f.farg === u.farg);
+          if (idx >= 0) nyFarger[idx] = { ...nyFarger[idx], antal: Math.max(0, nyFarger[idx].antal - u.antal) };
+        });
+        nyFarger = nyFarger.filter(f => f.antal > 0);
         const gammal = redigeraProdukt;
         const andringar = [];
         if (gammal.namn !== formNamn.trim()) andringar.push({ falt: 'Namn', fran: gammal.namn, till: formNamn.trim() });
         if ((gammal.artikel||'') !== formArtikel.trim()) andringar.push({ falt: 'Artikelnr', fran: gammal.artikel||'', till: formArtikel.trim() });
-        if (gammal.antal !== antal) andringar.push({ falt: 'Antal', fran: `${gammal.antal}${gammal.enhet||'st'}`, till: `${antal}${formEnhet}` });
+        if (uttag > 0) andringar.push({ falt: 'Uttag', fran: `${gammal.antal}${gammal.enhet||'st'}`, till: `${antal}${formEnhet} (-${uttag})` });
         if ((gammal.enhet||'st') !== formEnhet) andringar.push({ falt: 'Enhet', fran: gammal.enhet||'st', till: formEnhet });
         if (gammal.kategori !== formKategori.trim()) andringar.push({ falt: 'Kategori', fran: gammal.kategori, till: formKategori.trim() });
         if (gammal.minAntal !== minAntal) andringar.push({ falt: 'Varningsgräns', fran: String(gammal.minAntal), till: String(minAntal) });
-        const uppdaterad = { ...redigeraProdukt, namn: formNamn.trim(), artikel: formArtikel.trim(), antal, kategori: formKategori.trim(), minAntal, enhet: formEnhet, bild: formBild, farger, langder };
+        const uppdaterad = { ...redigeraProdukt, namn: formNamn.trim(), artikel: formArtikel.trim(), antal, kategori: formKategori.trim(), minAntal, enhet: formEnhet, bild: formBild, farger: nyFarger, langder };
         nyLista = produkter.map(p => p.id === redigeraProdukt.id ? uppdaterad : p);
         if (valdProdukt?.id === redigeraProdukt.id) setValdProdukt(uppdaterad);
         if (andringar.length > 0 && token) {
