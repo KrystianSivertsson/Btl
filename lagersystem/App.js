@@ -574,6 +574,8 @@ export default function App() {
   const [visaChat, setVisaChat] = useState(false);
   const [visaProfil, setVisaProfil] = useState(false);
   const [visaSidebar, setVisaSidebar] = useState(false);
+  const [sorteringsKolumn, setSorteringsKolumn] = useState(null);
+  const [sorteringsRiktning, setSorteringsRiktning] = useState('asc');
   const [tema, setTema] = useState('ljust');
   const c = tema === 'mörkt' ? MÖRKT : LJUST;
 
@@ -745,14 +747,40 @@ export default function App() {
     } catch { Alert.alert('Fel', 'Kunde inte exportera'); }
   };
 
-  const filtreradeLista = arRitning ? [] : produkter.filter(p => {
-    const matcherFlik = aktivFlik === 'Alla produkter' || p.kategori === aktivFlik;
-    const matcherSok =
-      p.namn.toLowerCase().includes(sok.toLowerCase()) ||
-      (p.artikel || '').includes(sok) ||
-      p.kategori.toLowerCase().includes(sok.toLowerCase());
-    return matcherFlik && matcherSok;
-  });
+  const sortera = (kolumn) => {
+    if (sorteringsKolumn === kolumn) {
+      setSorteringsRiktning(r => r === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSorteringsKolumn(kolumn);
+      setSorteringsRiktning('asc');
+    }
+  };
+
+  const filtreradeLista = arRitning ? [] : (() => {
+    const filtered = produkter.filter(p => {
+      const matcherFlik = aktivFlik === 'Alla produkter' || p.kategori === aktivFlik;
+      const matcherSok =
+        p.namn.toLowerCase().includes(sok.toLowerCase()) ||
+        (p.artikel || '').includes(sok) ||
+        p.kategori.toLowerCase().includes(sok.toLowerCase());
+      return matcherFlik && matcherSok;
+    });
+    if (!sorteringsKolumn) return filtered;
+    return [...filtered].sort((a, b) => {
+      let va, vb;
+      if (sorteringsKolumn === 'artikel') {
+        va = (a.artikel || '').toLowerCase();
+        vb = (b.artikel || '').toLowerCase();
+      } else if (sorteringsKolumn === 'antal') {
+        va = a.antal;
+        vb = b.antal;
+        return sorteringsRiktning === 'asc' ? va - vb : vb - va;
+      }
+      if (va < vb) return sorteringsRiktning === 'asc' ? -1 : 1;
+      if (va > vb) return sorteringsRiktning === 'asc' ? 1 : -1;
+      return 0;
+    });
+  })();
 
   const lagLager = filtreradeLista.filter(p => p.antal <= p.minAntal).length;
   const raknaProdukter = (flik) =>
@@ -872,22 +900,48 @@ export default function App() {
             )}
             <View style={styles.toppRad}>
               <Text style={[styles.kategoriRubrik, { color: c.textRubrik }, mobil && { fontSize: 16 }]}>{aktivFlik}</Text>
-              <TextInput
-                style={[styles.sokInput, { backgroundColor: c.sokInput, borderColor: c.inputBorder, color: c.text }, mobil && { width: 150, fontSize: 13 }]}
-                placeholder={mobil ? 'Sök...' : 'Sök produkt eller artikelnr...'}
-                placeholderTextColor={c.textMuted}
-                value={sok}
-                onChangeText={setSok}
-              />
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                {mobil && (
+                  <View style={{ flexDirection: 'row', gap: 4 }}>
+                    <TouchableOpacity
+                      style={[styles.sortKnapp, { backgroundColor: sorteringsKolumn === 'artikel' ? '#2563eb' : c.input, borderColor: c.inputBorder }]}
+                      onPress={() => sortera('artikel')}>
+                      <Text style={[styles.sortText, { color: sorteringsKolumn === 'artikel' ? '#fff' : c.textMuted }]}>
+                        Nr {sorteringsKolumn === 'artikel' ? (sorteringsRiktning === 'asc' ? '▲' : '▼') : ''}
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.sortKnapp, { backgroundColor: sorteringsKolumn === 'antal' ? '#2563eb' : c.input, borderColor: c.inputBorder }]}
+                      onPress={() => sortera('antal')}>
+                      <Text style={[styles.sortText, { color: sorteringsKolumn === 'antal' ? '#fff' : c.textMuted }]}>
+                        Saldo {sorteringsKolumn === 'antal' ? (sorteringsRiktning === 'asc' ? '▲' : '▼') : ''}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+                <TextInput
+                  style={[styles.sokInput, { backgroundColor: c.sokInput, borderColor: c.inputBorder, color: c.text }, mobil && { width: 120, fontSize: 13 }]}
+                  placeholder={mobil ? 'Sök...' : 'Sök produkt eller artikelnr...'}
+                  placeholderTextColor={c.textMuted}
+                  value={sok}
+                  onChangeText={setSok}
+                />
+              </View>
             </View>
 
             <>
                 {!mobil && (
                   <View style={[styles.tabellHuvud, { backgroundColor: c.tabellHuvud }]}>
-                    <Text style={[styles.tabellHuvudText, { flex: 1.2, color: c.tabellHuvudText }]}>Artikelnr</Text>
+                    <TouchableOpacity style={{ flex: 1.2, flexDirection: 'row', alignItems: 'center', gap: 4 }} onPress={() => sortera('artikel')}>
+                      <Text style={[styles.tabellHuvudText, { color: sorteringsKolumn === 'artikel' ? '#2563eb' : c.tabellHuvudText }]}>Artikelnr</Text>
+                      {sorteringsKolumn === 'artikel' && <Text style={{ color: '#2563eb', fontSize: 11 }}>{sorteringsRiktning === 'asc' ? '▲' : '▼'}</Text>}
+                    </TouchableOpacity>
                     <Text style={[styles.tabellHuvudText, { flex: 3, color: c.tabellHuvudText }]}>Produkt</Text>
                     <Text style={[styles.tabellHuvudText, { flex: 2, color: c.tabellHuvudText }]}>Kategori</Text>
-                    <Text style={[styles.tabellHuvudText, { flex: 1, textAlign: 'center', color: c.tabellHuvudText }]}>Antal</Text>
+                    <TouchableOpacity style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 }} onPress={() => sortera('antal')}>
+                      <Text style={[styles.tabellHuvudText, { textAlign: 'center', color: sorteringsKolumn === 'antal' ? '#2563eb' : c.tabellHuvudText }]}>Antal</Text>
+                      {sorteringsKolumn === 'antal' && <Text style={{ color: '#2563eb', fontSize: 11 }}>{sorteringsRiktning === 'asc' ? '▲' : '▼'}</Text>}
+                    </TouchableOpacity>
                     <Text style={[styles.tabellHuvudText, { flex: 1, textAlign: 'center', color: c.tabellHuvudText }]}>Status</Text>
                     <Text style={[styles.tabellHuvudText, { flex: 2, textAlign: 'right', color: c.tabellHuvudText }]}>Åtgärder</Text>
                   </View>
@@ -1057,6 +1111,8 @@ const styles = StyleSheet.create({
   varning: { backgroundColor: '#fef2f2', borderWidth: 1, borderColor: '#fca5a5', borderRadius: 8, padding: 10, marginBottom: 14 },
   varningText: { color: '#b91c1c', fontWeight: '600' },
   toppRad: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
+  sortKnapp: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 5, borderWidth: 1 },
+  sortText: { fontSize: 12, fontWeight: '600' },
   kategoriRubrik: { fontSize: 20, fontWeight: '700', color: '#1a2235' },
   sokInput: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#ddd', borderRadius: 8,
     paddingHorizontal: 12, paddingVertical: 8, fontSize: 14, color: '#333', width: 240 },
