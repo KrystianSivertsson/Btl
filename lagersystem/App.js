@@ -555,6 +555,87 @@ const cb = StyleSheet.create({
   tooltipText: { color: '#e0e0e0', fontSize: 12 },
 });
 
+// ─── Produkt detaljsida ───────────────────────────────────────────────────────
+function ProduktDetalj({ produkt, onTillbaka, onRedigera, inloggad }) {
+  const { c } = React.useContext(TemaContext);
+  const totalMeter = (produkt.langder || []).reduce((s, l) => s + (l.langd * l.antal), 0);
+  const fargSorterad = [...(produkt.farger || [])].sort((a, b) => a.farg.localeCompare(b.farg, 'sv'));
+
+  return (
+    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20, paddingBottom: 40 }}>
+      <TouchableOpacity onPress={onTillbaka} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 20 }}>
+        <Text style={{ color: '#2563eb', fontSize: 15, fontWeight: '600' }}>← Tillbaka</Text>
+      </TouchableOpacity>
+
+      <View style={{ flexDirection: 'row', gap: 24, flexWrap: 'wrap' }}>
+        {/* Bild */}
+        <View style={{ alignItems: 'center' }}>
+          {produkt.bild
+            ? <Image source={{ uri: produkt.bild }} style={{ width: 220, height: 160, borderRadius: 12, borderWidth: 1, borderColor: c.kortBorder }} resizeMode="cover" />
+            : <View style={{ width: 220, height: 160, borderRadius: 12, backgroundColor: c.input, borderWidth: 1, borderColor: c.kortBorder, justifyContent: 'center', alignItems: 'center' }}>
+                <Text style={{ fontSize: 48 }}>📦</Text>
+                <Text style={{ color: c.textMuted, marginTop: 8, fontSize: 13 }}>Ingen bild</Text>
+              </View>
+          }
+          {inloggad.roll === 'admin' && (
+            <TouchableOpacity style={{ marginTop: 12, backgroundColor: '#2563eb', borderRadius: 8, paddingHorizontal: 20, paddingVertical: 8 }} onPress={onRedigera}>
+              <Text style={{ color: '#fff', fontWeight: '700' }}>✏️ Redigera</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Info */}
+        <View style={{ flex: 1, minWidth: 200 }}>
+          <Text style={{ fontSize: 22, fontWeight: '800', color: c.textRubrik, marginBottom: 4 }}>{produkt.namn}</Text>
+          {produkt.artikel ? <Text style={{ color: c.textMuted, fontSize: 14, marginBottom: 12 }}>Art.nr: {produkt.artikel}</Text> : null}
+          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
+            <View style={{ backgroundColor: '#2563eb22', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 4 }}>
+              <Text style={{ color: '#2563eb', fontWeight: '600', fontSize: 13 }}>{produkt.kategori || 'Osorterat'}</Text>
+            </View>
+            <View style={{ backgroundColor: produkt.antal <= produkt.minAntal ? '#fee2e2' : '#dcfce7', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 4 }}>
+              <Text style={{ color: produkt.antal <= produkt.minAntal ? '#ef4444' : '#16a34a', fontWeight: '700', fontSize: 13 }}>
+                {produkt.antal}{produkt.enhet || 'st'} {produkt.antal <= produkt.minAntal ? '⚠️ Lågt' : '✓ OK'}
+              </Text>
+            </View>
+          </View>
+        </View>
+      </View>
+
+      {/* Längder (meter-produkter) */}
+      {produkt.enhet === 'm' && (produkt.langder || []).length > 0 && (
+        <View style={{ marginTop: 24 }}>
+          <Text style={{ fontSize: 16, fontWeight: '700', color: c.textRubrik, marginBottom: 12 }}>Längder</Text>
+          {[...(produkt.langder)].sort((a, b) => b.langd - a.langd).map((l, i) => (
+            <View key={i} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: c.kort, borderRadius: 8, padding: 12, marginBottom: 6, borderWidth: 1, borderColor: c.kortBorder }}>
+              <Text style={{ fontSize: 18, fontWeight: '800', color: c.textRubrik, minWidth: 60 }}>{l.langd}m</Text>
+              <Text style={{ color: c.textMuted, flex: 1 }}>× {l.antal} st</Text>
+              <Text style={{ fontWeight: '700', color: '#2563eb' }}>{(l.langd * l.antal).toFixed(1)}m</Text>
+            </View>
+          ))}
+          <View style={{ backgroundColor: c.tabellHuvud, borderRadius: 8, padding: 12, marginTop: 4 }}>
+            <Text style={{ color: c.textRubrik, fontWeight: '700', textAlign: 'right' }}>Totalt: {totalMeter.toFixed(1)}m</Text>
+          </View>
+        </View>
+      )}
+
+      {/* Färger */}
+      {fargSorterad.length > 0 && (
+        <View style={{ marginTop: 24 }}>
+          <Text style={{ fontSize: 16, fontWeight: '700', color: c.textRubrik, marginBottom: 12 }}>Färger</Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+            {fargSorterad.map((f, i) => (
+              <View key={i} style={{ backgroundColor: c.kort, borderRadius: 10, padding: 12, borderWidth: 1, borderColor: c.kortBorder, minWidth: 100, alignItems: 'center' }}>
+                <Text style={{ fontSize: 16, fontWeight: '700', color: c.textRubrik }}>{f.farg}</Text>
+                <Text style={{ color: c.textMuted, fontSize: 13, marginTop: 2 }}>{f.antal}{produkt.enhet || 'st'}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      )}
+    </ScrollView>
+  );
+}
+
 // ─── Main App ─────────────────────────────────────────────────────────────────
 export default function App() {
   const [inloggad, setInloggad] = useState(null);
@@ -566,11 +647,16 @@ export default function App() {
   const [sok, setSok] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
   const [redigeraProdukt, setRedigeraProdukt] = useState(null);
+  const [valdProdukt, setValdProdukt] = useState(null);
   const [formNamn, setFormNamn] = useState('');
+  const [formArtikel, setFormArtikel] = useState('');
   const [formAntal, setFormAntal] = useState('');
   const [formKategori, setFormKategori] = useState('');
   const [formMinAntal, setFormMinAntal] = useState('5');
   const [formEnhet, setFormEnhet] = useState('st');
+  const [formBild, setFormBild] = useState(null);
+  const [formFarger, setFormFarger] = useState([]);
+  const [formLangder, setFormLangder] = useState([]);
   const [visaAnvandare, setVisaAnvandare] = useState(false);
   const [visaChat, setVisaChat] = useState(false);
   const [andringslogg, setAndringslogg] = useState([]);
@@ -689,22 +775,40 @@ export default function App() {
     }
   }, [arAndringslogg]);
 
+  const vaeljBild = () => {
+    if (Platform.OS !== 'web') return;
+    const input = document.createElement('input');
+    input.type = 'file'; input.accept = 'image/*';
+    input.onchange = (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => setFormBild(ev.target.result);
+      reader.readAsDataURL(file);
+    };
+    input.click();
+  };
+
   const oppnaLaggTill = () => {
     setRedigeraProdukt(null);
-    setFormNamn(''); setFormAntal('');
-    setFormKategori(aktivFlik === 'Alla produkter' || arRitning ? '' : aktivFlik);
-    setFormMinAntal('5');
-    setFormEnhet('st');
+    setFormNamn(''); setFormArtikel(''); setFormAntal('');
+    setFormKategori(aktivFlik === 'Alla produkter' || arRitning || arAndringslogg ? '' : aktivFlik);
+    setFormMinAntal('5'); setFormEnhet('st');
+    setFormBild(null); setFormFarger([]); setFormLangder([]);
     setModalVisible(true);
   };
 
   const oppnaRedigera = (produkt) => {
     setRedigeraProdukt(produkt);
     setFormNamn(produkt.namn);
+    setFormArtikel(produkt.artikel || '');
     setFormAntal(String(produkt.antal));
     setFormKategori(produkt.kategori);
     setFormMinAntal(String(produkt.minAntal));
     setFormEnhet(produkt.enhet || 'st');
+    setFormBild(produkt.bild || null);
+    setFormFarger((produkt.farger || []).map(f => ({ ...f, antal: String(f.antal) })));
+    setFormLangder((produkt.langder || []).map(l => ({ langd: String(l.langd), antal: String(l.antal) })));
     setModalVisible(true);
   };
 
@@ -713,20 +817,21 @@ export default function App() {
     const antal = parseInt(formAntal) || 0;
     const minAntal = parseInt(formMinAntal) || 5;
     const genomfor = () => {
+      const farger = formFarger.filter(f => f.farg.trim()).map(f => ({ farg: f.farg.trim(), antal: parseInt(f.antal) || 0 }));
+      const langder = formLangder.filter(l => l.langd).map(l => ({ langd: parseFloat(l.langd) || 0, antal: parseInt(l.antal) || 0 }));
       let nyLista;
       if (redigeraProdukt) {
         const gammal = redigeraProdukt;
         const andringar = [];
         if (gammal.namn !== formNamn.trim()) andringar.push({ falt: 'Namn', fran: gammal.namn, till: formNamn.trim() });
+        if ((gammal.artikel||'') !== formArtikel.trim()) andringar.push({ falt: 'Artikelnr', fran: gammal.artikel||'', till: formArtikel.trim() });
         if (gammal.antal !== antal) andringar.push({ falt: 'Antal', fran: `${gammal.antal}${gammal.enhet||'st'}`, till: `${antal}${formEnhet}` });
         if ((gammal.enhet||'st') !== formEnhet) andringar.push({ falt: 'Enhet', fran: gammal.enhet||'st', till: formEnhet });
         if (gammal.kategori !== formKategori.trim()) andringar.push({ falt: 'Kategori', fran: gammal.kategori, till: formKategori.trim() });
         if (gammal.minAntal !== minAntal) andringar.push({ falt: 'Varningsgräns', fran: String(gammal.minAntal), till: String(minAntal) });
-        nyLista = produkter.map(p =>
-          p.id === redigeraProdukt.id
-            ? { ...p, namn: formNamn.trim(), antal, kategori: formKategori.trim(), minAntal, enhet: formEnhet }
-            : p
-        );
+        const uppdaterad = { ...redigeraProdukt, namn: formNamn.trim(), artikel: formArtikel.trim(), antal, kategori: formKategori.trim(), minAntal, enhet: formEnhet, bild: formBild, farger, langder };
+        nyLista = produkter.map(p => p.id === redigeraProdukt.id ? uppdaterad : p);
+        if (valdProdukt?.id === redigeraProdukt.id) setValdProdukt(uppdaterad);
         if (andringar.length > 0 && token) {
           fetch(`${API}/api/changes`, {
             method: 'POST',
@@ -737,8 +842,9 @@ export default function App() {
       } else {
         nyLista = [...produkter, {
           id: Date.now().toString(),
-          namn: formNamn.trim(), antal,
+          namn: formNamn.trim(), artikel: formArtikel.trim(), antal,
           kategori: formKategori.trim(), minAntal, enhet: formEnhet,
+          bild: formBild, farger, langder,
         }];
       }
       setProdukter(nyLista);
@@ -928,7 +1034,16 @@ export default function App() {
 
         {/* Innehåll */}
         <View style={[styles.innehall, { backgroundColor: c.bg }]}>
-          {arAndringslogg && (
+          {valdProdukt && (
+            <ProduktDetalj
+              produkt={valdProdukt}
+              inloggad={inloggad}
+              onTillbaka={() => setValdProdukt(null)}
+              onRedigera={() => oppnaRedigera(valdProdukt)}
+            />
+          )}
+
+          {!valdProdukt && arAndringslogg && (
             <ScrollView style={{ flex: 1 }}>
               <Text style={[styles.kategoriRubrik, { color: c.textRubrik, marginBottom: 16 }]}>🕐 Ändringslogg</Text>
               {andringslogg.length === 0 && <Text style={{ color: c.textMuted, textAlign: 'center', marginTop: 40 }}>Inga ändringar loggade ännu.</Text>}
@@ -952,7 +1067,7 @@ export default function App() {
             </ScrollView>
           )}
 
-          {arRitning && !arAndringslogg && Platform.OS === 'web' && (() => {
+          {!valdProdukt && arRitning && !arAndringslogg && Platform.OS === 'web' && (() => {
             const ritning = RITNINGAR.find(r => r.id === aktivFlik);
             return React.createElement('iframe', {
               key: ritning.id,
@@ -962,7 +1077,7 @@ export default function App() {
             });
           })()}
 
-          {!arRitning && !arAndringslogg && <>
+          {!valdProdukt && !arRitning && !arAndringslogg && <>
             {lagLager > 0 && (
               <View style={[styles.varning, { backgroundColor: c.varning, borderColor: c.varningBorder }]}>
                 <Text style={[styles.varningText, { color: c.varningText }]}>⚠️ {lagLager} produkt{lagLager > 1 ? 'er' : ''} har lågt lager</Text>
@@ -1032,7 +1147,7 @@ export default function App() {
                 const lavt = item.antal <= item.minAntal;
                 if (mobil) {
                   return (
-                    <View style={[styles.kort, { backgroundColor: lavt ? c.varning : c.kort, borderColor: lavt ? c.varningBorder : c.kortBorder }]}>
+                    <TouchableOpacity style={[styles.kort, { backgroundColor: lavt ? c.varning : c.kort, borderColor: lavt ? c.varningBorder : c.kortBorder }]} onPress={() => setValdProdukt(item)} activeOpacity={0.8}>
                       <View style={styles.kortTopp}>
                         <View style={{ flex: 1 }}>
                           <Text style={[styles.kortNamn, { color: c.textRubrik }]}>{item.namn}</Text>
@@ -1057,11 +1172,11 @@ export default function App() {
                           )}
                         </View>
                       </View>
-                    </View>
-                  );
+                    </TouchableOpacity>
+                );
                 }
                 return (
-                  <View style={[styles.rad, { backgroundColor: lavt ? c.varning : (index % 2 === 0 ? c.radJamn : c.rad), borderBottomColor: lavt ? c.varningBorder : c.kortBorder }]}>
+                  <TouchableOpacity style={[styles.rad, { backgroundColor: lavt ? c.varning : (index % 2 === 0 ? c.radJamn : c.rad), borderBottomColor: lavt ? c.varningBorder : c.kortBorder }]} onPress={() => setValdProdukt(item)} activeOpacity={0.7}>
                     <Text style={[styles.radText, { flex: 1.2, color: c.textMuted }]}>{item.artikel || '—'}</Text>
                     <Text style={[styles.radText, { flex: 3, fontWeight: '600', color: c.textRubrik }]}>{item.namn}</Text>
                     <Text style={[styles.radText, { flex: 2, color: c.text }]}>{item.kategori || '—'}</Text>
@@ -1081,7 +1196,7 @@ export default function App() {
                         </TouchableOpacity>
                       )}
                     </View>
-                  </View>
+                  </TouchableOpacity>
                 );
               }}
             />
@@ -1100,10 +1215,15 @@ export default function App() {
       {/* Produkt modal */}
       <Modal visible={modalVisible} animationType="fade" transparent>
         <View style={styles.modalBakgrund}>
-          <View style={[styles.modalKort, { backgroundColor: c.modal }]}>
+          <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center', padding: 16 }}>
+          <View style={[styles.modalKort, { backgroundColor: c.modal, width: '100%', maxWidth: 480 }]}>
             <Text style={[styles.modalTitel, { color: c.textRubrik }]}>{redigeraProdukt ? 'Redigera produkt' : 'Ny produkt'}</Text>
+
             <TextInput style={[styles.input, { backgroundColor: c.input, borderColor: c.inputBorder, color: c.inputText }]} placeholder="Produktnamn *" placeholderTextColor={c.textMuted}
               value={formNamn} onChangeText={setFormNamn} />
+            <TextInput style={[styles.input, { backgroundColor: c.input, borderColor: c.inputBorder, color: c.inputText }]} placeholder="Artikelnummer" placeholderTextColor={c.textMuted}
+              value={formArtikel} onChangeText={setFormArtikel} />
+
             <Text style={[styles.inputLabel, { color: c.textMuted }]}>Kategori</Text>
             <View style={styles.kategoriRow}>
               {FLIKAR.filter(f => f !== 'Alla produkter').map(f => (
@@ -1114,6 +1234,7 @@ export default function App() {
                 </TouchableOpacity>
               ))}
             </View>
+
             <Text style={[styles.inputLabel, { color: c.textMuted }]}>Antal i lager</Text>
             <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
               <TextInput style={[styles.input, { flex: 1, marginBottom: 0, backgroundColor: c.input, borderColor: c.inputBorder, color: c.inputText }]} placeholder="Antal" placeholderTextColor={c.textMuted}
@@ -1128,10 +1249,73 @@ export default function App() {
                 ))}
               </View>
             </View>
+
             {inloggad.roll === 'admin' && (
               <TextInput style={[styles.input, { backgroundColor: c.input, borderColor: c.inputBorder, color: c.inputText }]} placeholder="Varning vid antal (standard 5)" placeholderTextColor={c.textMuted}
                 value={formMinAntal} onChangeText={setFormMinAntal} keyboardType="numeric" />
             )}
+
+            {/* Bild */}
+            <Text style={[styles.inputLabel, { color: c.textMuted, marginTop: 4 }]}>Produktbild</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+              {formBild
+                ? <Image source={{ uri: formBild }} style={{ width: 80, height: 60, borderRadius: 6, borderWidth: 1, borderColor: c.kortBorder }} resizeMode="cover" />
+                : <View style={{ width: 80, height: 60, borderRadius: 6, backgroundColor: c.input, borderWidth: 1, borderColor: c.kortBorder, justifyContent: 'center', alignItems: 'center' }}>
+                    <Text style={{ fontSize: 22 }}>📦</Text>
+                  </View>
+              }
+              <TouchableOpacity style={[styles.kategoriKnapp, { backgroundColor: c.input }]} onPress={vaeljBild}>
+                <Text style={{ color: c.text, fontSize: 13 }}>📷 Välj bild</Text>
+              </TouchableOpacity>
+              {formBild && <TouchableOpacity onPress={() => setFormBild(null)}><Text style={{ color: '#ef4444' }}>✕ Ta bort</Text></TouchableOpacity>}
+            </View>
+
+            {/* Längder (bara för meter) */}
+            {formEnhet === 'm' && (
+              <View style={{ marginBottom: 14 }}>
+                <Text style={[styles.inputLabel, { color: c.textMuted }]}>Längder</Text>
+                {formLangder.map((l, i) => (
+                  <View key={i} style={{ flexDirection: 'row', gap: 6, marginBottom: 6, alignItems: 'center' }}>
+                    <TextInput style={[styles.input, { flex: 1, marginBottom: 0, backgroundColor: c.input, borderColor: c.inputBorder, color: c.inputText }]}
+                      placeholder="Längd (m)" placeholderTextColor={c.textMuted} keyboardType="numeric"
+                      value={l.langd} onChangeText={v => setFormLangder(prev => prev.map((x, j) => j === i ? { ...x, langd: v } : x))} />
+                    <TextInput style={[styles.input, { flex: 1, marginBottom: 0, backgroundColor: c.input, borderColor: c.inputBorder, color: c.inputText }]}
+                      placeholder="Antal st" placeholderTextColor={c.textMuted} keyboardType="numeric"
+                      value={l.antal} onChangeText={v => setFormLangder(prev => prev.map((x, j) => j === i ? { ...x, antal: v } : x))} />
+                    <TouchableOpacity onPress={() => setFormLangder(prev => prev.filter((_, j) => j !== i))}>
+                      <Text style={{ color: '#ef4444', fontSize: 18, paddingHorizontal: 4 }}>✕</Text>
+                    </TouchableOpacity>
+                  </View>
+                ))}
+                <TouchableOpacity style={[styles.kategoriKnapp, { backgroundColor: c.input, alignSelf: 'flex-start' }]}
+                  onPress={() => setFormLangder(prev => [...prev, { langd: '', antal: '' }])}>
+                  <Text style={{ color: '#2563eb', fontWeight: '600' }}>+ Lägg till längd</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* Färger */}
+            <View style={{ marginBottom: 14 }}>
+              <Text style={[styles.inputLabel, { color: c.textMuted }]}>Färger</Text>
+              {formFarger.map((f, i) => (
+                <View key={i} style={{ flexDirection: 'row', gap: 6, marginBottom: 6, alignItems: 'center' }}>
+                  <TextInput style={[styles.input, { flex: 2, marginBottom: 0, backgroundColor: c.input, borderColor: c.inputBorder, color: c.inputText }]}
+                    placeholder="Färg" placeholderTextColor={c.textMuted}
+                    value={f.farg} onChangeText={v => setFormFarger(prev => prev.map((x, j) => j === i ? { ...x, farg: v } : x))} />
+                  <TextInput style={[styles.input, { flex: 1, marginBottom: 0, backgroundColor: c.input, borderColor: c.inputBorder, color: c.inputText }]}
+                    placeholder="Antal" placeholderTextColor={c.textMuted} keyboardType="numeric"
+                    value={f.antal} onChangeText={v => setFormFarger(prev => prev.map((x, j) => j === i ? { ...x, antal: v } : x))} />
+                  <TouchableOpacity onPress={() => setFormFarger(prev => prev.filter((_, j) => j !== i))}>
+                    <Text style={{ color: '#ef4444', fontSize: 18, paddingHorizontal: 4 }}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+              <TouchableOpacity style={[styles.kategoriKnapp, { backgroundColor: c.input, alignSelf: 'flex-start' }]}
+                onPress={() => setFormFarger(prev => [...prev, { farg: '', antal: '' }])}>
+                <Text style={{ color: '#2563eb', fontWeight: '600' }}>+ Lägg till färg</Text>
+              </TouchableOpacity>
+            </View>
+
             <View style={styles.modalKnappar}>
               <TouchableOpacity style={[styles.avbrytKnapp, { backgroundColor: c.input }]} onPress={() => setModalVisible(false)}>
                 <Text style={[styles.avbrytText, { color: c.textMuted }]}>Avbryt</Text>
@@ -1141,6 +1325,7 @@ export default function App() {
               </TouchableOpacity>
             </View>
           </View>
+          </ScrollView>
         </View>
       </Modal>
     </SafeAreaView>
