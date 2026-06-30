@@ -902,7 +902,7 @@ export default function App() {
                 const lavt = item.antal <= item.minAntal;
                 if (mobil) {
                   return (
-                    <View style={[styles.kort, { backgroundColor: c.kort, borderColor: c.kortBorder }, lavt && styles.kortLavt]}>
+                    <View style={[styles.kort, { backgroundColor: lavt ? c.varning : c.kort, borderColor: lavt ? c.varningBorder : c.kortBorder }]}>
                       <View style={styles.kortTopp}>
                         <View style={{ flex: 1 }}>
                           <Text style={[styles.kortNamn, { color: c.textRubrik }]}>{item.namn}</Text>
@@ -931,7 +931,7 @@ export default function App() {
                   );
                 }
                 return (
-                  <View style={[styles.rad, { backgroundColor: index % 2 === 0 ? c.radJamn : c.rad, borderBottomColor: c.kortBorder }, lavt && styles.radLavt]}>
+                  <View style={[styles.rad, { backgroundColor: lavt ? c.varning : (index % 2 === 0 ? c.radJamn : c.rad), borderBottomColor: lavt ? c.varningBorder : c.kortBorder }]}>
                     <Text style={[styles.radText, { flex: 1.2, color: c.textMuted }]}>{item.artikel || '—'}</Text>
                     <Text style={[styles.radText, { flex: 3, fontWeight: '600', color: c.textRubrik }]}>{item.namn}</Text>
                     <Text style={[styles.radText, { flex: 2, color: c.text }]}>{item.kategori || '—'}</Text>
