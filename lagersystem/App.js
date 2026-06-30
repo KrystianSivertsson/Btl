@@ -567,6 +567,7 @@ function ProduktDetalj({ produkt, onTillbaka, onRedigera, inloggad }) {
   const fargSorterad = [...(produkt.farger || [])].sort((a, b) => a.farg.localeCompare(b.farg, 'sv'));
   const artikelBildUrl = produkt.artikel ? `${API}/artikel-bilder/${produkt.artikel}.png` : null;
   const [artikelBildFel, setArtikelBildFel] = useState(false);
+  const [bildStorModal, setBildStorModal] = useState(false);
   const bildKalla = produkt.bild || (!artikelBildFel && artikelBildUrl ? artikelBildUrl : null);
 
   return (
@@ -579,15 +580,29 @@ function ProduktDetalj({ produkt, onTillbaka, onRedigera, inloggad }) {
         {/* Bild */}
         <View style={{ alignItems: 'center' }}>
           {bildKalla
-            ? <Image source={{ uri: bildKalla }}
-                style={{ width: 220, height: 160, borderRadius: 12, borderWidth: 1, borderColor: c.kortBorder, backgroundColor: '#fff' }}
-                resizeMode="contain"
-                onError={() => { if (!produkt.bild) setArtikelBildFel(true); }} />
+            ? <TouchableOpacity onPress={() => setBildStorModal(true)} activeOpacity={0.85}>
+                <Image source={{ uri: bildKalla }}
+                  style={{ width: 220, height: 160, borderRadius: 12, borderWidth: 1, borderColor: c.kortBorder, backgroundColor: '#fff' }}
+                  resizeMode="contain"
+                  onError={() => { if (!produkt.bild) setArtikelBildFel(true); }} />
+                <Text style={{ color: c.textMuted, fontSize: 11, textAlign: 'center', marginTop: 4 }}>Tryck för att förstora</Text>
+              </TouchableOpacity>
             : <View style={{ width: 220, height: 160, borderRadius: 12, backgroundColor: c.input, borderWidth: 1, borderColor: c.kortBorder, justifyContent: 'center', alignItems: 'center' }}>
                 <Text style={{ fontSize: 48 }}>📦</Text>
                 <Text style={{ color: c.textMuted, marginTop: 8, fontSize: 13 }}>Ingen bild</Text>
               </View>
           }
+
+          {/* Lightbox */}
+          <Modal visible={bildStorModal} transparent animationType="fade" onRequestClose={() => setBildStorModal(false)}>
+            <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.92)', justifyContent: 'center', alignItems: 'center' }}
+              activeOpacity={1} onPress={() => setBildStorModal(false)}>
+              <Image source={{ uri: bildKalla }}
+                style={{ width: '90%', height: '70%' }}
+                resizeMode="contain" />
+              <Text style={{ color: '#aaa', marginTop: 16, fontSize: 13 }}>Tryck var som helst för att stänga</Text>
+            </TouchableOpacity>
+          </Modal>
           {inloggad.roll === 'admin' && (
             <TouchableOpacity style={{ marginTop: 12, backgroundColor: '#2563eb', borderRadius: 8, paddingHorizontal: 20, paddingVertical: 8 }} onPress={onRedigera}>
               <Text style={{ color: '#fff', fontWeight: '700' }}>✏️ Redigera</Text>
