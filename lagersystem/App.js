@@ -560,6 +560,9 @@ function ProduktDetalj({ produkt, onTillbaka, onRedigera, inloggad }) {
   const { c } = React.useContext(TemaContext);
   const totalMeter = (produkt.langder || []).reduce((s, l) => s + (l.langd * l.antal), 0);
   const fargSorterad = [...(produkt.farger || [])].sort((a, b) => a.farg.localeCompare(b.farg, 'sv'));
+  const artikelBildUrl = produkt.artikel ? `${API}/artikel-bilder/${produkt.artikel}.png` : null;
+  const [artikelBildFel, setArtikelBildFel] = useState(false);
+  const bildKalla = produkt.bild || (!artikelBildFel && artikelBildUrl ? artikelBildUrl : null);
 
   return (
     <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20, paddingBottom: 40 }}>
@@ -570,8 +573,11 @@ function ProduktDetalj({ produkt, onTillbaka, onRedigera, inloggad }) {
       <View style={{ flexDirection: 'row', gap: 24, flexWrap: 'wrap' }}>
         {/* Bild */}
         <View style={{ alignItems: 'center' }}>
-          {produkt.bild
-            ? <Image source={{ uri: produkt.bild }} style={{ width: 220, height: 160, borderRadius: 12, borderWidth: 1, borderColor: c.kortBorder }} resizeMode="cover" />
+          {bildKalla
+            ? <Image source={{ uri: bildKalla }}
+                style={{ width: 220, height: 160, borderRadius: 12, borderWidth: 1, borderColor: c.kortBorder, backgroundColor: '#fff' }}
+                resizeMode="contain"
+                onError={() => { if (!produkt.bild) setArtikelBildFel(true); }} />
             : <View style={{ width: 220, height: 160, borderRadius: 12, backgroundColor: c.input, borderWidth: 1, borderColor: c.kortBorder, justifyContent: 'center', alignItems: 'center' }}>
                 <Text style={{ fontSize: 48 }}>📦</Text>
                 <Text style={{ color: c.textMuted, marginTop: 8, fontSize: 13 }}>Ingen bild</Text>

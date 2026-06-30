@@ -220,6 +220,9 @@ app.post('/api/convert-step', authMiddleware, (req, res) => {
   }
 });
 
+// --- Artikel-bilder ---
+app.use('/artikel-bilder', express.static(path.join(__dirname, 'artikel-bilder')));
+
 // --- Static web app ---
 app.use(express.static(path.join(__dirname, 'dist')));
 app.get(/(.*)/, (req, res, next) => {
