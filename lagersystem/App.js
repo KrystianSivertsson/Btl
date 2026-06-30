@@ -767,15 +767,14 @@ export default function App() {
     });
     if (!sorteringsKolumn) return filtered;
     return [...filtered].sort((a, b) => {
-      let va, vb;
-      if (sorteringsKolumn === 'artikel') {
-        va = (a.artikel || '').toLowerCase();
-        vb = (b.artikel || '').toLowerCase();
-      } else if (sorteringsKolumn === 'antal') {
-        va = a.antal;
-        vb = b.antal;
-        return sorteringsRiktning === 'asc' ? va - vb : vb - va;
+      if (sorteringsKolumn === 'antal') {
+        return sorteringsRiktning === 'asc' ? a.antal - b.antal : b.antal - a.antal;
       }
+      let va, vb;
+      if (sorteringsKolumn === 'artikel') { va = (a.artikel || ''); vb = (b.artikel || ''); }
+      else if (sorteringsKolumn === 'namn') { va = a.namn; vb = b.namn; }
+      else if (sorteringsKolumn === 'kategori') { va = a.kategori; vb = b.kategori; }
+      va = va.toLowerCase(); vb = vb.toLowerCase();
       if (va < vb) return sorteringsRiktning === 'asc' ? -1 : 1;
       if (va > vb) return sorteringsRiktning === 'asc' ? 1 : -1;
       return 0;
@@ -936,8 +935,14 @@ export default function App() {
                       <Text style={[styles.tabellHuvudText, { color: sorteringsKolumn === 'artikel' ? '#2563eb' : c.tabellHuvudText }]}>Artikelnr</Text>
                       {sorteringsKolumn === 'artikel' && <Text style={{ color: '#2563eb', fontSize: 11 }}>{sorteringsRiktning === 'asc' ? '▲' : '▼'}</Text>}
                     </TouchableOpacity>
-                    <Text style={[styles.tabellHuvudText, { flex: 3, color: c.tabellHuvudText }]}>Produkt</Text>
-                    <Text style={[styles.tabellHuvudText, { flex: 2, color: c.tabellHuvudText }]}>Kategori</Text>
+                    <TouchableOpacity style={{ flex: 3, flexDirection: 'row', alignItems: 'center', gap: 4 }} onPress={() => sortera('namn')}>
+                      <Text style={[styles.tabellHuvudText, { color: sorteringsKolumn === 'namn' ? '#2563eb' : c.tabellHuvudText }]}>Produkt</Text>
+                      {sorteringsKolumn === 'namn' && <Text style={{ color: '#2563eb', fontSize: 11 }}>{sorteringsRiktning === 'asc' ? '▲' : '▼'}</Text>}
+                    </TouchableOpacity>
+                    <TouchableOpacity style={{ flex: 2, flexDirection: 'row', alignItems: 'center', gap: 4 }} onPress={() => sortera('kategori')}>
+                      <Text style={[styles.tabellHuvudText, { color: sorteringsKolumn === 'kategori' ? '#2563eb' : c.tabellHuvudText }]}>Kategori</Text>
+                      {sorteringsKolumn === 'kategori' && <Text style={{ color: '#2563eb', fontSize: 11 }}>{sorteringsRiktning === 'asc' ? '▲' : '▼'}</Text>}
+                    </TouchableOpacity>
                     <TouchableOpacity style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 }} onPress={() => sortera('antal')}>
                       <Text style={[styles.tabellHuvudText, { textAlign: 'center', color: sorteringsKolumn === 'antal' ? '#2563eb' : c.tabellHuvudText }]}>Antal</Text>
                       {sorteringsKolumn === 'antal' && <Text style={{ color: '#2563eb', fontSize: 11 }}>{sorteringsRiktning === 'asc' ? '▲' : '▼'}</Text>}
