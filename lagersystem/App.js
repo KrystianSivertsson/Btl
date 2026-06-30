@@ -22,8 +22,39 @@ function urlBase64ToUint8Array(base64String) {
 }
 const STORAGE_KEY = 'lagersystem_produkter';
 const TOKEN_KEY = 'lagersystem_token';
+const TEMA_KEY = 'lagersystem_tema';
 const FLIKAR = ['Alla produkter', 'Schueco ASE 60', 'Schueco ASS 32', 'Osorterat'];
 const RITNINGAR = [{ id: 'ase60', label: 'ASE 60 Ritningar', fil: 'ritningar_ase60.pdf' }];
+
+const TemaContext = React.createContext(null);
+
+const LJUST = {
+  bg: '#f0f2f5', header: '#ffffff', headerBorder: '#e0e0e0',
+  sidebar: '#1a2235', sidebarText: '#aab', sidebarTextAktiv: '#ffffff',
+  sidebarBadge: '#2a3448', sidebarBadgeText: '#778',
+  kort: '#ffffff', kortBorder: '#e8eaf0',
+  text: '#333333', textMuted: '#888888', textRubrik: '#1a2235',
+  input: '#f8f9fa', inputBorder: '#e0e0e0', inputText: '#333333',
+  tabellHuvud: '#e8eaf0', tabellHuvudText: '#556',
+  rad: '#ffffff', radJamn: '#fafbfc',
+  modal: '#ffffff',
+  varning: '#fef2f2', varningBorder: '#fca5a5', varningText: '#b91c1c',
+  sokInput: '#ffffff',
+};
+
+const MÖRKT = {
+  bg: '#0f1117', header: '#141926', headerBorder: '#2a3448',
+  sidebar: '#0d1422', sidebarText: '#7a8899', sidebarTextAktiv: '#ffffff',
+  sidebarBadge: '#1a2438', sidebarBadgeText: '#556',
+  kort: '#1a2235', kortBorder: '#2a3448',
+  text: '#d0d8e8', textMuted: '#7a8899', textRubrik: '#ffffff',
+  input: '#0f1117', inputBorder: '#2a3448', inputText: '#d0d8e8',
+  tabellHuvud: '#1a2235', tabellHuvudText: '#7a8899',
+  rad: '#1a2235', radJamn: '#151e2e',
+  modal: '#1a2235',
+  varning: '#2a1515', varningBorder: '#5a2a2a', varningText: '#f87171',
+  sokInput: '#0f1117',
+};
 
 // ─── Login screen ────────────────────────────────────────────────────────────
 function LoginSkarm({ onLogin }) {
@@ -82,6 +113,7 @@ const ls = StyleSheet.create({
 
 // ─── User management ─────────────────────────────────────────────────────────
 function AnvandarHantering({ token, onStang }) {
+  const { c } = React.useContext(TemaContext) || { c: LJUST };
   const [anvandare, setAnvandare] = useState([]);
   const [nyttNamn, setNyttNamn] = useState('');
   const [nyttLosen, setNyttLosen] = useState('');
@@ -117,20 +149,20 @@ function AnvandarHantering({ token, onStang }) {
   return (
     <Modal visible animationType="fade" transparent>
       <View style={um.bakgrund}>
-        <View style={um.panel}>
+        <View style={[um.panel, { backgroundColor: c.modal }]}>
           <View style={um.rubrikRad}>
-            <Text style={um.rubrik}>Hantera användare</Text>
-            <TouchableOpacity onPress={onStang}><Text style={um.stang}>✕</Text></TouchableOpacity>
+            <Text style={[um.rubrik, { color: c.textRubrik }]}>Hantera användare</Text>
+            <TouchableOpacity onPress={onStang}><Text style={[um.stang, { color: c.textMuted }]}>✕</Text></TouchableOpacity>
           </View>
           <FlatList
             data={anvandare}
             keyExtractor={i => i.id}
             style={{ maxHeight: 220, marginBottom: 16 }}
             renderItem={({ item }) => (
-              <View style={um.rad}>
+              <View style={[um.rad, { borderBottomColor: c.kortBorder }]}>
                 <View>
-                  <Text style={um.radNamn}>{item.namn}</Text>
-                  <Text style={um.radUser}>@{item.username} · {item.roll}</Text>
+                  <Text style={[um.radNamn, { color: c.textRubrik }]}>{item.namn}</Text>
+                  <Text style={[um.radUser, { color: c.textMuted }]}>@{item.username} · {item.roll}</Text>
                 </View>
                 {item.username !== 'admin' &&
                   <TouchableOpacity style={um.taBortKnapp} onPress={() => taBort(item.id)}>
@@ -139,15 +171,15 @@ function AnvandarHantering({ token, onStang }) {
               </View>
             )}
           />
-          <Text style={um.sektionRubrik}>Lägg till användare</Text>
+          <Text style={[um.sektionRubrik, { color: c.textMuted }]}>Lägg till användare</Text>
           {fel ? <Text style={{ color: '#ef4444', marginBottom: 8 }}>{fel}</Text> : null}
-          <TextInput style={um.input} placeholder="Visningsnamn" placeholderTextColor="#999" value={nyttVisningsnamn} onChangeText={setNyttVisningsnamn} />
-          <TextInput style={um.input} placeholder="Användarnamn *" placeholderTextColor="#999" value={nyttNamn} onChangeText={setNyttNamn} autoCapitalize="none" />
-          <TextInput style={um.input} placeholder="Lösenord *" placeholderTextColor="#999" value={nyttLosen} onChangeText={setNyttLosen} secureTextEntry />
+          <TextInput style={[um.input, { backgroundColor: c.input, borderColor: c.inputBorder, color: c.inputText }]} placeholder="Visningsnamn" placeholderTextColor={c.textMuted} value={nyttVisningsnamn} onChangeText={setNyttVisningsnamn} />
+          <TextInput style={[um.input, { backgroundColor: c.input, borderColor: c.inputBorder, color: c.inputText }]} placeholder="Användarnamn *" placeholderTextColor={c.textMuted} value={nyttNamn} onChangeText={setNyttNamn} autoCapitalize="none" />
+          <TextInput style={[um.input, { backgroundColor: c.input, borderColor: c.inputBorder, color: c.inputText }]} placeholder="Lösenord *" placeholderTextColor={c.textMuted} value={nyttLosen} onChangeText={setNyttLosen} secureTextEntry />
           <View style={um.rollRad}>
             {['user','admin'].map(r => (
-              <TouchableOpacity key={r} style={[um.rollKnapp, nyttRoll===r && um.rollAktiv]} onPress={() => setNyttRoll(r)}>
-                <Text style={[um.rollText, nyttRoll===r && um.rollTextAktiv]}>{r === 'admin' ? 'Admin' : 'Användare'}</Text>
+              <TouchableOpacity key={r} style={[um.rollKnapp, { backgroundColor: c.input }, nyttRoll===r && um.rollAktiv]} onPress={() => setNyttRoll(r)}>
+                <Text style={[um.rollText, { color: c.text }, nyttRoll===r && um.rollTextAktiv]}>{r === 'admin' ? 'Admin' : 'Användare'}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -190,6 +222,7 @@ const um = StyleSheet.create({
 const AVATARER = ['😀','😎','🧑‍💻','👷','🧰','🔧','📦','🏗️','🪟','🏠','⭐','🦊','🐺','🦁','🐻','🐼','🤖','👾'];
 
 function ProfilModal({ user, token, onStang, onUppdatera, prenumereraPush }) {
+  const { c } = React.useContext(TemaContext) || { c: LJUST };
   const [fliken, setFliken] = useState('avatar');
   const [valdAvatar, setValdAvatar] = useState(user.avatar || '😀');
   const [gammalt, setGammalt] = useState('');
@@ -246,24 +279,24 @@ function ProfilModal({ user, token, onStang, onUppdatera, prenumereraPush }) {
   return (
     <Modal visible animationType="fade" transparent>
       <View style={pm.bakgrund}>
-        <View style={pm.panel}>
+        <View style={[pm.panel, { backgroundColor: c.modal }]}>
           <View style={pm.rubrikRad}>
-            <Text style={pm.rubrik}>Min profil</Text>
-            <TouchableOpacity onPress={onStang}><Text style={pm.stang}>✕</Text></TouchableOpacity>
+            <Text style={[pm.rubrik, { color: c.textRubrik }]}>Min profil</Text>
+            <TouchableOpacity onPress={onStang}><Text style={[pm.stang, { color: c.textMuted }]}>✕</Text></TouchableOpacity>
           </View>
 
-          <View style={pm.anvInfo}>
+          <View style={[pm.anvInfo, { backgroundColor: c.input }]}>
             <Text style={pm.bigAvatar}>{user.avatar || '😀'}</Text>
             <View>
-              <Text style={pm.anvNamn}>{user.namn}</Text>
-              <Text style={pm.anvUser}>@{user.username} · {user.roll}</Text>
+              <Text style={[pm.anvNamn, { color: c.textRubrik }]}>{user.namn}</Text>
+              <Text style={[pm.anvUser, { color: c.textMuted }]}>@{user.username} · {user.roll}</Text>
             </View>
           </View>
 
           <View style={pm.flikar}>
             {['avatar','lösenord','notiser'].map(f => (
-              <TouchableOpacity key={f} style={[pm.flik, fliken===f && pm.flikAktiv]} onPress={() => { setFliken(f); setFel(''); setMeddelande(''); }}>
-                <Text style={[pm.flikText, fliken===f && pm.flikTextAktiv]}>
+              <TouchableOpacity key={f} style={[pm.flik, { backgroundColor: c.input }, fliken===f && pm.flikAktiv]} onPress={() => { setFliken(f); setFel(''); setMeddelande(''); }}>
+                <Text style={[pm.flikText, { color: c.text }, fliken===f && pm.flikTextAktiv]}>
                   {f === 'avatar' ? '🖼 Avatar' : f === 'lösenord' ? '🔒 Lösenord' : '🔔 Notiser'}
                 </Text>
               </TouchableOpacity>
@@ -277,7 +310,7 @@ function ProfilModal({ user, token, onStang, onUppdatera, prenumereraPush }) {
             <View>
               <View style={pm.avatarGrid}>
                 {AVATARER.map(a => (
-                  <TouchableOpacity key={a} style={[pm.avatarKnapp, valdAvatar===a && pm.avatarAktiv]} onPress={() => setValdAvatar(a)}>
+                  <TouchableOpacity key={a} style={[pm.avatarKnapp, { backgroundColor: c.input }, valdAvatar===a && pm.avatarAktiv]} onPress={() => setValdAvatar(a)}>
                     <Text style={pm.avatarEmoji}>{a}</Text>
                   </TouchableOpacity>
                 ))}
@@ -290,11 +323,11 @@ function ProfilModal({ user, token, onStang, onUppdatera, prenumereraPush }) {
 
           {fliken === 'lösenord' && (
             <View>
-              <TextInput style={pm.input} placeholder="Nuvarande lösenord" placeholderTextColor="#999"
+              <TextInput style={[pm.input, { backgroundColor: c.input, borderColor: c.inputBorder, color: c.inputText }]} placeholder="Nuvarande lösenord" placeholderTextColor={c.textMuted}
                 value={gammalt} onChangeText={setGammalt} secureTextEntry />
-              <TextInput style={pm.input} placeholder="Nytt lösenord" placeholderTextColor="#999"
+              <TextInput style={[pm.input, { backgroundColor: c.input, borderColor: c.inputBorder, color: c.inputText }]} placeholder="Nytt lösenord" placeholderTextColor={c.textMuted}
                 value={nytt} onChangeText={setNytt} secureTextEntry />
-              <TextInput style={pm.input} placeholder="Bekräfta nytt lösenord" placeholderTextColor="#999"
+              <TextInput style={[pm.input, { backgroundColor: c.input, borderColor: c.inputBorder, color: c.inputText }]} placeholder="Bekräfta nytt lösenord" placeholderTextColor={c.textMuted}
                 value={bekrafta} onChangeText={setBekrafta} secureTextEntry />
               <TouchableOpacity style={pm.sparaKnapp} onPress={bytaLosen}>
                 <Text style={pm.sparaText}>Byt lösenord</Text>
@@ -304,18 +337,18 @@ function ProfilModal({ user, token, onStang, onUppdatera, prenumereraPush }) {
 
           {fliken === 'notiser' && (
             <View style={{ paddingTop: 8 }}>
-              <View style={pm.notisInfoRad}>
-                <Text style={pm.notisLabel}>Protokoll:</Text>
-                <Text style={pm.notisVarde}>{typeof window !== 'undefined' ? window.location.protocol : '–'}</Text>
+              <View style={[pm.notisInfoRad, { borderBottomColor: c.kortBorder }]}>
+                <Text style={[pm.notisLabel, { color: c.textMuted }]}>Protokoll:</Text>
+                <Text style={[pm.notisVarde, { color: c.text }]}>{typeof window !== 'undefined' ? window.location.protocol : '–'}</Text>
               </View>
-              <View style={pm.notisInfoRad}>
-                <Text style={pm.notisLabel}>Behörighet:</Text>
-                <Text style={[pm.notisVarde, notisStatus === 'granted' && { color: '#16a34a' }, notisStatus === 'denied' && { color: '#ef4444' }]}>
+              <View style={[pm.notisInfoRad, { borderBottomColor: c.kortBorder }]}>
+                <Text style={[pm.notisLabel, { color: c.textMuted }]}>Behörighet:</Text>
+                <Text style={[pm.notisVarde, { color: c.text }, notisStatus === 'granted' && { color: '#16a34a' }, notisStatus === 'denied' && { color: '#ef4444' }]}>
                   {notisStatus === 'granted' ? '✓ Tillåten' : notisStatus === 'denied' ? '✗ Nekad' : notisStatus === 'ej-stödd' ? 'Stöds ej' : 'Ej vald'}
                 </Text>
               </View>
               {notisStatus === 'denied' && (
-                <Text style={pm.notisHjälp}>Notiser är blockerade i webbläsaren. Gå till Chrome-inställningar → Webbplatsinställningar → Notiser och tillåt denna sida.</Text>
+                <Text style={[pm.notisHjälp, { color: c.textMuted }]}>Notiser är blockerade i webbläsaren. Gå till Chrome-inställningar → Webbplatsinställningar → Notiser och tillåt denna sida.</Text>
               )}
               {notisStatus !== 'granted' && notisStatus !== 'denied' && (
                 <TouchableOpacity style={pm.sparaKnapp} onPress={aktiveraNotisar}>
@@ -367,6 +400,7 @@ const pm = StyleSheet.create({
 
 // ─── Chat panel ───────────────────────────────────────────────────────────────
 function ChatPanel({ user, onStang, meddelanden, online, wsRef }) {
+  const { c } = React.useContext(TemaContext) || { c: LJUST };
   const [text, setText] = useState('');
   const listRef = useRef(null);
 
@@ -387,7 +421,7 @@ function ChatPanel({ user, onStang, meddelanden, online, wsRef }) {
   };
 
   return (
-    <View style={cp.panel}>
+    <View style={[cp.panel, { backgroundColor: c.modal, borderColor: c.kortBorder }]}>
       <View style={cp.header}>
         <View>
           <Text style={cp.rubrik}>💬 Chat</Text>
@@ -395,25 +429,25 @@ function ChatPanel({ user, onStang, meddelanden, online, wsRef }) {
         </View>
         <TouchableOpacity onPress={onStang}><Text style={cp.stang}>✕</Text></TouchableOpacity>
       </View>
-      <ScrollView ref={listRef} style={cp.lista} contentContainerStyle={{ padding: 12 }}>
+      <ScrollView ref={listRef} style={[cp.lista, { backgroundColor: c.bg }]} contentContainerStyle={{ padding: 12 }}>
         {meddelanden.map(m => {
           const arJag = m.username === user.username;
           return (
             <View key={m.id} style={[cp.bubblaWrap, arJag && cp.bubblaWrapJag]}>
-              {!arJag && <Text style={cp.avsandare}>{m.user}</Text>}
-              <View style={[cp.bubbla, arJag && cp.bubblaJag]}>
-                <Text style={[cp.bubblaText, arJag && cp.bubblaTextJag]}>{m.text}</Text>
+              {!arJag && <Text style={[cp.avsandare, { color: c.textMuted }]}>{m.user}</Text>}
+              <View style={[cp.bubbla, { backgroundColor: c.kort, borderColor: c.kortBorder }, arJag && cp.bubblaJag]}>
+                <Text style={[cp.bubblaText, { color: c.text }, arJag && cp.bubblaTextJag]}>{m.text}</Text>
               </View>
-              <Text style={cp.tid}>{formatTid(m.tid)}</Text>
+              <Text style={[cp.tid, { color: c.textMuted }]}>{formatTid(m.tid)}</Text>
             </View>
           );
         })}
       </ScrollView>
-      <View style={cp.inputRad}>
+      <View style={[cp.inputRad, { backgroundColor: c.modal, borderTopColor: c.kortBorder }]}>
         <TextInput
-          style={cp.input}
+          style={[cp.input, { backgroundColor: c.input, color: c.inputText }]}
           placeholder="Skriv ett meddelande..."
-          placeholderTextColor="#999"
+          placeholderTextColor={c.textMuted}
           value={text}
           onChangeText={setText}
           onSubmitEditing={skicka}
@@ -540,6 +574,14 @@ export default function App() {
   const [visaChat, setVisaChat] = useState(false);
   const [visaProfil, setVisaProfil] = useState(false);
   const [visaSidebar, setVisaSidebar] = useState(false);
+  const [tema, setTema] = useState('ljust');
+  const c = tema === 'mörkt' ? MÖRKT : LJUST;
+
+  const toggleTema = async () => {
+    const nytt = tema === 'ljust' ? 'mörkt' : 'ljust';
+    setTema(nytt);
+    await AsyncStorage.setItem(TEMA_KEY, nytt);
+  };
   const [meddelanden, setMeddelanden] = useState([]);
   const [onlineUsers, setOnlineUsers] = useState([]);
   const [chatBubble, setChatBubble] = useState(null);
@@ -576,7 +618,10 @@ export default function App() {
     if (visaChat) { setChatBubble(null); setOlastaAntal(0); }
   }, [visaChat]);
 
-  useEffect(() => { kollaSession(); }, []);
+  useEffect(() => {
+    kollaSession();
+    AsyncStorage.getItem(TEMA_KEY).then(v => { if (v) setTema(v); });
+  }, []);
   useEffect(() => { if (inloggad) laddaProdukter(); }, [inloggad]);
 
   const kollaSession = async () => {
@@ -713,31 +758,35 @@ export default function App() {
   const raknaProdukter = (flik) =>
     flik === 'Alla produkter' ? produkter.length : produkter.filter(p => p.kategori === flik).length;
 
-  if (kollarSession) return <View style={styles.container} />;
-  if (!inloggad) return <LoginSkarm onLogin={loggaIn} />;
+  if (kollarSession) return <View style={[styles.container, { backgroundColor: c.bg }]} />;
+  if (!inloggad) return <TemaContext.Provider value={{ tema, c }}><LoginSkarm onLogin={loggaIn} /></TemaContext.Provider>;
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+    <TemaContext.Provider value={{ tema, c, toggleTema }}>
+    <SafeAreaView style={[styles.container, { backgroundColor: c.bg }]}>
+      <StatusBar barStyle={tema === 'mörkt' ? 'light-content' : 'dark-content'} backgroundColor={c.header} />
 
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: c.header, borderBottomColor: c.headerBorder }]}>
         <View style={styles.headerVanster}>
           {mobil && (
             <TouchableOpacity style={styles.hamburger} onPress={() => setVisaSidebar(v => !v)}>
-              <Text style={styles.hamburgerText}>☰</Text>
+              <Text style={[styles.hamburgerText, { color: c.textRubrik }]}>☰</Text>
             </TouchableOpacity>
           )}
           <Image source={require('./assets/logo.jpg')} style={[styles.logo, mobil && { width: 130, height: 38 }]} resizeMode="contain" />
         </View>
         <View style={styles.headerHoger}>
-          <TouchableOpacity onPress={() => setVisaProfil(true)} style={styles.avatarKnapp}>
+          <TouchableOpacity onPress={toggleTema} style={[styles.headerKnapp, { backgroundColor: c.bg }]}>
+            <Text style={styles.headerKnappText}>{tema === 'mörkt' ? '☀️' : '🌙'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setVisaProfil(true)} style={[styles.avatarKnapp, { backgroundColor: c.bg }]}>
             <Text style={styles.avatarEmoji}>{inloggad.avatar || '😀'}</Text>
-            {!mobil && <Text style={styles.headerAnv}>{inloggad.namn}</Text>}
+            {!mobil && <Text style={[styles.headerAnv, { color: c.textMuted }]}>{inloggad.namn}</Text>}
           </TouchableOpacity>
           {inloggad.roll === 'admin' && (
-            <TouchableOpacity style={styles.headerKnapp} onPress={() => setVisaAnvandare(true)}>
-              <Text style={styles.headerKnappText}>{mobil ? '👥' : 'Användare'}</Text>
+            <TouchableOpacity style={[styles.headerKnapp, { backgroundColor: c.bg }]} onPress={() => setVisaAnvandare(true)}>
+              <Text style={[styles.headerKnappText, { color: c.text }]}>{mobil ? '👥' : 'Användare'}</Text>
             </TouchableOpacity>
           )}
           <TouchableOpacity style={styles.chatHeaderKnapp} onPress={() => setVisaChat(v => !v)}>
@@ -756,19 +805,19 @@ export default function App() {
         )}
 
         {/* Sidebar */}
-        {(!mobil || visaSidebar) && <View style={[styles.sidebar, mobil && styles.sidebarMobil]}>
-          <Text style={styles.sidebarTitel}>Kategorier</Text>
+        {(!mobil || visaSidebar) && <View style={[styles.sidebar, mobil && styles.sidebarMobil, { backgroundColor: c.sidebar }]}>
+          <Text style={[styles.sidebarTitel, { color: c.sidebarText }]}>Kategorier</Text>
           {FLIKAR.map(flik => (
             <TouchableOpacity
               key={flik}
               style={[styles.sidebarFlik, aktivFlik === flik && styles.sidebarFlikAktiv]}
               onPress={() => { setAktivFlik(flik); setSok(''); }}
             >
-              <Text style={[styles.sidebarFlikText, aktivFlik === flik && styles.sidebarFlikTextAktiv]}>
+              <Text style={[styles.sidebarFlikText, { color: c.sidebarText }, aktivFlik === flik && styles.sidebarFlikTextAktiv]}>
                 {flik}
               </Text>
-              <View style={[styles.sidebarBadge, aktivFlik === flik && styles.sidebarBadgeAktiv]}>
-                <Text style={[styles.sidebarBadgeText, aktivFlik === flik && styles.sidebarBadgeTextAktiv]}>
+              <View style={[styles.sidebarBadge, { backgroundColor: c.sidebarBadge }, aktivFlik === flik && styles.sidebarBadgeAktiv]}>
+                <Text style={[styles.sidebarBadgeText, { color: c.sidebarBadgeText }, aktivFlik === flik && styles.sidebarBadgeTextAktiv]}>
                   {raknaProdukter(flik)}
                 </Text>
               </View>
@@ -804,7 +853,7 @@ export default function App() {
         </View>}
 
         {/* Innehåll */}
-        <View style={styles.innehall}>
+        <View style={[styles.innehall, { backgroundColor: c.bg }]}>
           {arRitning && Platform.OS === 'web' && (() => {
             const ritning = RITNINGAR.find(r => r.id === aktivFlik);
             return React.createElement('iframe', {
@@ -817,16 +866,16 @@ export default function App() {
 
           {!arRitning && <>
             {lagLager > 0 && (
-              <View style={styles.varning}>
-                <Text style={styles.varningText}>⚠️ {lagLager} produkt{lagLager > 1 ? 'er' : ''} har lågt lager</Text>
+              <View style={[styles.varning, { backgroundColor: c.varning, borderColor: c.varningBorder }]}>
+                <Text style={[styles.varningText, { color: c.varningText }]}>⚠️ {lagLager} produkt{lagLager > 1 ? 'er' : ''} har lågt lager</Text>
               </View>
             )}
             <View style={styles.toppRad}>
-              <Text style={[styles.kategoriRubrik, mobil && { fontSize: 16 }]}>{aktivFlik}</Text>
+              <Text style={[styles.kategoriRubrik, { color: c.textRubrik }, mobil && { fontSize: 16 }]}>{aktivFlik}</Text>
               <TextInput
-                style={[styles.sokInput, mobil && { width: 150, fontSize: 13 }]}
+                style={[styles.sokInput, { backgroundColor: c.sokInput, borderColor: c.inputBorder, color: c.text }, mobil && { width: 150, fontSize: 13 }]}
                 placeholder={mobil ? 'Sök...' : 'Sök produkt eller artikelnr...'}
-                placeholderTextColor="#999"
+                placeholderTextColor={c.textMuted}
                 value={sok}
                 onChangeText={setSok}
               />
@@ -834,13 +883,13 @@ export default function App() {
 
             <>
                 {!mobil && (
-                  <View style={styles.tabellHuvud}>
-                    <Text style={[styles.tabellHuvudText, { flex: 1.2 }]}>Artikelnr</Text>
-                    <Text style={[styles.tabellHuvudText, { flex: 3 }]}>Produkt</Text>
-                    <Text style={[styles.tabellHuvudText, { flex: 2 }]}>Kategori</Text>
-                    <Text style={[styles.tabellHuvudText, { flex: 1, textAlign: 'center' }]}>Antal</Text>
-                    <Text style={[styles.tabellHuvudText, { flex: 1, textAlign: 'center' }]}>Status</Text>
-                    <Text style={[styles.tabellHuvudText, { flex: 2, textAlign: 'right' }]}>Åtgärder</Text>
+                  <View style={[styles.tabellHuvud, { backgroundColor: c.tabellHuvud }]}>
+                    <Text style={[styles.tabellHuvudText, { flex: 1.2, color: c.tabellHuvudText }]}>Artikelnr</Text>
+                    <Text style={[styles.tabellHuvudText, { flex: 3, color: c.tabellHuvudText }]}>Produkt</Text>
+                    <Text style={[styles.tabellHuvudText, { flex: 2, color: c.tabellHuvudText }]}>Kategori</Text>
+                    <Text style={[styles.tabellHuvudText, { flex: 1, textAlign: 'center', color: c.tabellHuvudText }]}>Antal</Text>
+                    <Text style={[styles.tabellHuvudText, { flex: 1, textAlign: 'center', color: c.tabellHuvudText }]}>Status</Text>
+                    <Text style={[styles.tabellHuvudText, { flex: 2, textAlign: 'right', color: c.tabellHuvudText }]}>Åtgärder</Text>
                   </View>
                 )}
 
@@ -848,23 +897,23 @@ export default function App() {
                   data={filtreradeLista}
                   keyExtractor={item => item.id}
                   contentContainerStyle={styles.lista}
-                  ListEmptyComponent={<Text style={styles.tomText}>Inga produkter.</Text>}
+                  ListEmptyComponent={<Text style={[styles.tomText, { color: c.textMuted }]}>Inga produkter.</Text>}
                   renderItem={({ item, index }) => {
                 const lavt = item.antal <= item.minAntal;
                 if (mobil) {
                   return (
-                    <View style={[styles.kort, lavt && styles.kortLavt]}>
+                    <View style={[styles.kort, { backgroundColor: c.kort, borderColor: c.kortBorder }, lavt && styles.kortLavt]}>
                       <View style={styles.kortTopp}>
                         <View style={{ flex: 1 }}>
-                          <Text style={styles.kortNamn}>{item.namn}</Text>
-                          <Text style={styles.kortArtikel}>{item.artikel || '—'}</Text>
+                          <Text style={[styles.kortNamn, { color: c.textRubrik }]}>{item.namn}</Text>
+                          <Text style={[styles.kortArtikel, { color: c.textMuted }]}>{item.artikel || '—'}</Text>
                         </View>
                         <View style={[styles.statusBadge, lavt ? styles.statusLavt : styles.statusOk]}>
                           <Text style={styles.statusText}>{lavt ? 'Lågt' : 'OK'}</Text>
                         </View>
                       </View>
                       <View style={styles.kortBotten}>
-                        <Text style={styles.kortAntal}>
+                        <Text style={[styles.kortAntal, { color: c.text }]}>
                           Antal: <Text style={[{ fontWeight: '700' }, lavt && styles.radAntalLavt]}>{item.antal}</Text>
                         </Text>
                         <View style={styles.radKnappar}>
@@ -882,11 +931,11 @@ export default function App() {
                   );
                 }
                 return (
-                  <View style={[styles.rad, index % 2 === 0 && styles.radJamn, lavt && styles.radLavt]}>
-                    <Text style={[styles.radText, { flex: 1.2 }, styles.radArtikelnr]}>{item.artikel || '—'}</Text>
-                    <Text style={[styles.radText, { flex: 3 }, styles.radNamn]}>{item.namn}</Text>
-                    <Text style={[styles.radText, { flex: 2 }]}>{item.kategori || '—'}</Text>
-                    <Text style={[styles.radText, { flex: 1, textAlign: 'center' }, lavt && styles.radAntalLavt]}>{item.antal}</Text>
+                  <View style={[styles.rad, { backgroundColor: index % 2 === 0 ? c.radJamn : c.rad, borderBottomColor: c.kortBorder }, lavt && styles.radLavt]}>
+                    <Text style={[styles.radText, { flex: 1.2, color: c.textMuted }]}>{item.artikel || '—'}</Text>
+                    <Text style={[styles.radText, { flex: 3, fontWeight: '600', color: c.textRubrik }]}>{item.namn}</Text>
+                    <Text style={[styles.radText, { flex: 2, color: c.text }]}>{item.kategori || '—'}</Text>
+                    <Text style={[styles.radText, { flex: 1, textAlign: 'center', color: c.text }, lavt && styles.radAntalLavt]}>{item.antal}</Text>
                     <View style={{ flex: 1, alignItems: 'center' }}>
                       <View style={[styles.statusBadge, lavt ? styles.statusLavt : styles.statusOk]}>
                         <Text style={styles.statusText}>{lavt ? 'Lågt' : 'OK'}</Text>
@@ -921,27 +970,27 @@ export default function App() {
       {/* Produkt modal */}
       <Modal visible={modalVisible} animationType="fade" transparent>
         <View style={styles.modalBakgrund}>
-          <View style={styles.modalKort}>
-            <Text style={styles.modalTitel}>{redigeraProdukt ? 'Redigera produkt' : 'Ny produkt'}</Text>
-            <TextInput style={styles.input} placeholder="Produktnamn *" placeholderTextColor="#999"
+          <View style={[styles.modalKort, { backgroundColor: c.modal }]}>
+            <Text style={[styles.modalTitel, { color: c.textRubrik }]}>{redigeraProdukt ? 'Redigera produkt' : 'Ny produkt'}</Text>
+            <TextInput style={[styles.input, { backgroundColor: c.input, borderColor: c.inputBorder, color: c.inputText }]} placeholder="Produktnamn *" placeholderTextColor={c.textMuted}
               value={formNamn} onChangeText={setFormNamn} />
-            <Text style={styles.inputLabel}>Kategori</Text>
+            <Text style={[styles.inputLabel, { color: c.textMuted }]}>Kategori</Text>
             <View style={styles.kategoriRow}>
               {FLIKAR.filter(f => f !== 'Alla produkter').map(f => (
                 <TouchableOpacity key={f}
-                  style={[styles.kategoriKnapp, formKategori === f && styles.kategoriKnappAktiv]}
+                  style={[styles.kategoriKnapp, { backgroundColor: c.input }, formKategori === f && styles.kategoriKnappAktiv]}
                   onPress={() => setFormKategori(f)}>
-                  <Text style={[styles.kategoriText, formKategori === f && styles.kategoriTextAktiv]}>{f}</Text>
+                  <Text style={[styles.kategoriText, { color: c.text }, formKategori === f && styles.kategoriTextAktiv]}>{f}</Text>
                 </TouchableOpacity>
               ))}
             </View>
-            <TextInput style={styles.input} placeholder="Antal i lager" placeholderTextColor="#999"
+            <TextInput style={[styles.input, { backgroundColor: c.input, borderColor: c.inputBorder, color: c.inputText }]} placeholder="Antal i lager" placeholderTextColor={c.textMuted}
               value={formAntal} onChangeText={setFormAntal} keyboardType="numeric" />
-            <TextInput style={styles.input} placeholder="Varning vid antal (standard 5)" placeholderTextColor="#999"
+            <TextInput style={[styles.input, { backgroundColor: c.input, borderColor: c.inputBorder, color: c.inputText }]} placeholder="Varning vid antal (standard 5)" placeholderTextColor={c.textMuted}
               value={formMinAntal} onChangeText={setFormMinAntal} keyboardType="numeric" />
             <View style={styles.modalKnappar}>
-              <TouchableOpacity style={styles.avbrytKnapp} onPress={() => setModalVisible(false)}>
-                <Text style={styles.avbrytText}>Avbryt</Text>
+              <TouchableOpacity style={[styles.avbrytKnapp, { backgroundColor: c.input }]} onPress={() => setModalVisible(false)}>
+                <Text style={[styles.avbrytText, { color: c.textMuted }]}>Avbryt</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.sparaKnapp} onPress={sparaProdukt}>
                 <Text style={styles.sparaText}>Spara</Text>
@@ -951,6 +1000,7 @@ export default function App() {
         </View>
       </Modal>
     </SafeAreaView>
+    </TemaContext.Provider>
   );
 }
 
